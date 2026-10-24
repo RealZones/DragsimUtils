@@ -9,6 +9,7 @@ Initial Dragsim Utils release for Minecraft 26.1.2 on Fabric.
 - Mining sessions, powder rates, drill fuel information and forge/recipe tools.
 - Storage previews, item inspection and inventory protection options.
 - Player profile browsing for inventory, pets, progression and public rankings.
+- Missing collection suggestions exclude the unreleased Auto Recombobulator, Scarf's Thesis and Blaze pet.
 - Customizable HUDs, themes, favorites, settings search and module shortcuts.
 - Optional Discord Rich Presence with controls for shared activity details.
 - One-time import of compatible Endsight settings and tracker history.

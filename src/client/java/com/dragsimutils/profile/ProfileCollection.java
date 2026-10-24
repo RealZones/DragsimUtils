@@ -10,6 +10,9 @@ public final class ProfileCollection {
     public final JsonObject catalog;
     public final List<ProfileData.Item> accessories, missingAccessories, pets, missingPets;
     private static final List<String> TIERS=List.of("COMMON","UNCOMMON","RARE","EPIC","LEGENDARY","MYTHIC","DIVINE","SPECIAL","VERY_SPECIAL");
+    // The catalog includes these accessories and pets before they are obtainable.
+    private static final Set<String> UNRELEASED_ACCESSORIES=Set.of("auto_recombobulator","scarf_thesis");
+    private static final Set<String> UNRELEASED_PETS=Set.of("blaze");
     public static int rank(String rarity) { return TIERS.indexOf(rarity.toUpperCase(Locale.ROOT)); }
     public ProfileCollection(ProfileData data,JsonObject catalog) {
         this.data=data; this.catalog=catalog;
@@ -26,6 +29,7 @@ public final class ProfileCollection {
         Map<String,String> targets=new TreeMap<>();
         for(var entry:definitions.entrySet()) if(entry.getValue().isJsonObject() && accessory(entry.getValue().getAsJsonObject())) {
             String id=entry.getKey(),family=family(id,entry.getValue().getAsJsonObject()),old=targets.get(family);
+            if(UNRELEASED_ACCESSORIES.contains(id)) continue;
             if(old==null || rank(text(entry.getValue().getAsJsonObject(),"tier","COMMON"))>rank(text(object(definitions,old),"tier","COMMON"))) targets.put(family,id);
         }
         List<ProfileData.Item> missing=new ArrayList<>();
@@ -39,6 +43,7 @@ public final class ProfileCollection {
         for(ProfileData.Item pet:pets) species.add(text(object(object(pet.raw(),"extra"),"pet_data"),"type","").toLowerCase(Locale.ROOT));
         List<ProfileData.Item> absent=new ArrayList<>();
         for(var entry:object(catalog,"pets").entrySet()) if(entry.getValue().isJsonObject() && !species.contains(entry.getKey().toLowerCase(Locale.ROOT))) {
+            if(UNRELEASED_PETS.contains(entry.getKey().toLowerCase(Locale.ROOT))) continue;
             JsonObject pet=entry.getValue().getAsJsonObject(),def=new JsonObject();
             def.addProperty("name",text(pet,"display",title(entry.getKey())));
             String rarity="COMMON";
