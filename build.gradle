@@ -1,0 +1,466 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+version = project.mod_version
+group = project.maven_group
+
+loom {
+	// Storage Preview reads three protected fields off AbstractContainerScreen.
+	// See StoragePreview itself for why this is a widener and not a mixin.
+	accessWidenerPath = file("src/main/resources/dragsimutils.accesswidener")
+
+	splitEnvironmentSourceSets()
+	mods {
+		"dragsimutils" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+// Every build records its source commit for reviewers to compare with the jar.
+def commit = System.getenv("GITHUB_SHA") ?: providers.exec {
+    commandLine 'git', 'rev-parse', 'HEAD'
+}.standardOutput.asText.get().trim()
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "commit", commit
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version, "commit": commit
+    }
+}
+
+sourceSets.test.compileClasspath += sourceSets.client.output + sourceSets.client.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.client.runtimeClasspath
+
+tasks.register('bossDropsChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dragons.BossDropsChecks'
+}
+
+tasks.register('discordPresenceChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.social.DiscordPresenceChecks'
+}
+
+tasks.register('bossDropsAuditChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dragons.BossDropsAuditChecks'
+}
+
+tasks.register('cooldownsChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.visual.CooldownsChecks'
+}
+
+tasks.register('miningVisibilityChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.storage.MiningVisibilityChecks'
+}
+
+tasks.register('slayerReminderChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.slayers.SlayerReminderChecks'
+}
+
+tasks.register('slayerBestChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.slayers.SlayerBestChecks'
+}
+
+tasks.register('slayerSpawnSignalChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.slayers.SlayerSpawnSignalChecks'
+}
+
+tasks.register('revenantSpawnTilesChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.slayers.RevenantSpawnTilesChecks'
+}
+
+tasks.register('recipesChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.storage.RecipesChecks'
+}
+
+tasks.named('check') {
+	dependsOn 'bossDropsChecks', 'bossDropsAuditChecks', 'cooldownsChecks', 'discordPresenceChecks', 'miningVisibilityChecks', 'slayerReminderChecks', 'slayerBestChecks', 'slayerSpawnSignalChecks', 'revenantSpawnTilesChecks', 'recipesChecks'
+}
+
+tasks.register('inventoryVisualChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.visual.InventoryVisualChecks'
+}
+
+tasks.named('check') {
+	dependsOn 'inventoryVisualChecks'
+}
+
+tasks.register('inventoryHookChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.visual.InventoryHookChecks'
+}
+
+tasks.named('check') {
+	dependsOn 'inventoryHookChecks'
+}
+
+tasks.register('dropsChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.qol.DropsChecks'
+}
+
+tasks.register('npcPricesChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.qol.NpcPricesChecks'
+}
+
+tasks.register('slotLockChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.qol.SlotLockChecks'
+}
+
+tasks.register('seraphBossChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.slayers.SeraphBossChecks'
+}
+
+tasks.register('summonsChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.slayers.SummonsChecks'
+}
+
+tasks.named('check') {
+	dependsOn 'dropsChecks', 'npcPricesChecks', 'slotLockChecks', 'seraphBossChecks', 'summonsChecks'
+}
+
+tasks.named('test') {
+	// Regression runners above do not use a framework; future framework tests still run.
+	failOnNoDiscoveredTests = false
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	// A separate sources jar lets reviewers inspect the same build's Java files.
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+tasks.register('lootRollChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.qol.LootRollChecks'
+}
+
+tasks.register('zealotTrackerChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.zealots.ZealotTrackerChecks'
+}
+
+tasks.register('storageOverviewChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.storage.StorageOverviewChecks'
+}
+
+tasks.named('check') {
+	dependsOn 'storageOverviewChecks', 'lootRollChecks', 'zealotTrackerChecks'
+}
+
+tasks.register('protectorChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dragons.ProtectorChecks'
+}
+
+tasks.register('equipmentHudChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.visual.EquipmentHudChecks'
+}
+
+tasks.register('miningProfitChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.storage.MiningProfitChecks'
+}
+
+tasks.named('check') {
+	dependsOn 'protectorChecks', 'equipmentHudChecks', 'miningProfitChecks'
+}
+
+tasks.register('miningGainLedgerChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.storage.MiningGainLedgerChecks'
+}
+
+tasks.named('check') { dependsOn 'miningGainLedgerChecks' }
+
+tasks.register('dungeonContextChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.DungeonContextChecks'
+}
+
+tasks.register('dungeonMapChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.DungeonMapChecks'
+}
+
+tasks.register('threeWeirdosChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.ThreeWeirdosChecks'
+}
+
+tasks.named('check') { dependsOn 'dungeonContextChecks', 'dungeonMapChecks', 'threeWeirdosChecks' }
+
+tasks.register('dungeonMapOverlayChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.dungeon.DungeonMapOverlayChecks'
+}
+tasks.named('check') { dependsOn 'dungeonMapOverlayChecks' }
+
+tasks.register('ticTacToeChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.TicTacToeChecks'
+}
+
+tasks.register('ticTacToeBoardChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.TicTacToeBoardChecks'
+}
+
+tasks.named('check') { dependsOn 'ticTacToeChecks', 'ticTacToeBoardChecks' }
+
+tasks.register('terminalLogicChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.TerminalLogicChecks'
+}
+tasks.named('check') { dependsOn 'terminalLogicChecks' }
+
+tasks.register('terminalUiChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.TerminalUiChecks'
+}
+tasks.named('check') { dependsOn 'terminalUiChecks' }
+
+tasks.register('simonSaysChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.dungeon.SimonSaysChecks'
+}
+tasks.named('check') { dependsOn 'simonSaysChecks' }
+
+tasks.register('higherOrLowerChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.dungeon.HigherOrLowerChecks'
+}
+tasks.named('check') { dependsOn 'higherOrLowerChecks' }
+
+tasks.register('quizChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.QuizChecks'
+}
+
+tasks.named('check') { dependsOn 'quizChecks' }
+
+tasks.register('icePathChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.IcePathChecks'
+}
+
+tasks.named('check') { dependsOn 'icePathChecks' }
+
+tasks.register('bloodRoomChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.BloodRoomChecks'
+}
+
+tasks.named('check') { dependsOn 'bloodRoomChecks' }
+
+tasks.register('bloodRunChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.dungeon.BloodRunChecks'
+}
+tasks.named('check') { dependsOn 'bloodRunChecks' }
+
+tasks.register('eggRespawnTimingChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.dragons.EggRespawnTimingChecks'
+}
+tasks.named('check') { dependsOn 'eggRespawnTimingChecks' }
+
+tasks.register('trackerRowsChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.hud.TrackerRowsChecks'
+}
+tasks.named('check') { dependsOn 'trackerRowsChecks' }
+
+tasks.register('compactModuleChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.ui.CompactModuleChecks'
+}
+tasks.register('colourStripChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.zealots.ColourStripChecks'
+}
+tasks.register('beamGeometryChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.visual.BeamGeometryChecks'
+}
+tasks.named('check') { dependsOn 'compactModuleChecks', 'colourStripChecks', 'beamGeometryChecks' }
+
+tasks.register('shinyNodesChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.visual.ShinyNodesChecks'
+}
+tasks.named('check') { dependsOn 'shinyNodesChecks' }
+
+tasks.register('rarityChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.qol.RarityChecks'
+}
+
+tasks.register('petsChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.storage.PetsChecks'
+}
+
+tasks.named('check') { dependsOn 'rarityChecks', 'petsChecks' }
+
+tasks.register('powderAccuracyChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.storage.PowderAccuracyChecks'
+}
+tasks.named('check') { dependsOn 'powderAccuracyChecks' }
+
+
+tasks.register('browserPresentationChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.ui.BrowserPresentationChecks'
+}
+tasks.named('check') { dependsOn 'browserPresentationChecks' }
+
+tasks.register('profileDataChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.profile.ProfileDataChecks'
+}
+tasks.named('check') { dependsOn 'profileDataChecks' }
+tasks.register('profileCommandChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.profile.ProfileCommandChecks'
+}
+tasks.named('check') { dependsOn 'profileCommandChecks' }
+
+tasks.register('profileViewChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.profile.ProfileViewChecks'
+    systemProperty 'dragsimutils.profileBenchmark', providers.gradleProperty('profilePreparationBenchmark').isPresent()
+}
+tasks.named('check') { dependsOn 'profileViewChecks' }
+tasks.register('abilitySpamChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.qol.AbilitySpamChecks'
+}
+tasks.named('check') { dependsOn 'abilitySpamChecks' }
+tasks.register('cacheTrackerChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.storage.CacheTrackerChecks'
+}
+tasks.named('check') { dependsOn 'cacheTrackerChecks' }
+
+tasks.register('legacyConfigMigrationChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.LegacyConfigMigrationChecks'
+}
+tasks.named('check') { dependsOn 'legacyConfigMigrationChecks' }
+
+tasks.register('networkSafetyChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.profile.NetworkSafetyChecks'
+}
+tasks.named('check') { dependsOn 'networkSafetyChecks' }
+// Native screenshots and interaction checks live in a separate test mod.
+if (providers.gradleProperty('profileVisualTest').isPresent() || providers.gradleProperty('cacheVisualTest').isPresent()
+        || providers.gradleProperty('mapVisualTest').isPresent() || providers.gradleProperty('keyVisualTest').isPresent()) {
+    fabricApi.configureTests {
+        createSourceSet = true
+        modId = 'dragsimutils-profile-tests'
+        enableGameTests = false
+        enableClientGameTests = true
+        clearRunDirectory = false
+    }
+    sourceSets.gametest.compileClasspath += sourceSets.client.output + sourceSets.client.compileClasspath
+    sourceSets.gametest.runtimeClasspath += sourceSets.client.runtimeClasspath
+    // One suite per run: each opens its own world and screenshots, and the others are slow.
+    def only = providers.gradleProperty('cacheVisualTest').isPresent() ? '"com.dragsimutils.storage.CacheVisualTest"'
+            : providers.gradleProperty('mapVisualTest').isPresent() ? '"com.dragsimutils.dungeon.DungeonMapVisualTest"'
+            : providers.gradleProperty('keyVisualTest').isPresent() ? '"com.dragsimutils.dungeon.KeyAlertVisualTest"'
+            : '"com.dragsimutils.profile.ProfileVisualTest"'
+    tasks.named('processGametestResources') {
+        inputs.property('only', only)
+        filesMatching('fabric.mod.json') {
+            filter { line -> line.replace('"com.dragsimutils.profile.ProfileVisualTest", "com.dragsimutils.storage.CacheVisualTest", "com.dragsimutils.dungeon.DungeonMapVisualTest", "com.dragsimutils.dungeon.KeyAlertVisualTest"', only) }
+        }
+    }
+}

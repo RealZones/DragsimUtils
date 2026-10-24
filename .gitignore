@@ -1,0 +1,36 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Fabric Loom
+run/
+.fabric/
+remappedSrc/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+# Local runtime data and review/build output
+config/
+logs/
+output/
+.claude/
+*.hprof
+
+
+# Local contributor instructions
+AGENTS.md

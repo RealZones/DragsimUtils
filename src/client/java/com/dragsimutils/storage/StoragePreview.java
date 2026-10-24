@@ -1,0 +1,573 @@
+package com.dragsimutils.storage;
+
+import com.dragsimutils.ui.Draw;
+import com.dragsimutils.ui.Module;
+import com.dragsimutils.ui.Setting;
+import com.dragsimutils.ui.Theme;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.Container;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Remembers what was in each storage page and draws it again when you hover that page
+ * in the Storage menu.
+ *
+ * The server drives all of this through window titles, which is what makes it cheap:
+ * the root menu is titled "Storage" and holds items named "Storage Page N", and
+ * opening one of those opens a window titled "Storage Page (N/7)". The page number is
+ * on both ends already, so nothing has to be matched by item identity - no NBT tag to
+ * hunt for, no slot index to hard-code, and a page moving in the root menu changes
+ * nothing. If the server ever renames its windows this breaks loudly and in one place,
+ * which is the trade being made.
+ *
+ * Capture is on tick, not only on close. Closing is how the feature was described -
+ * snapshot the page as it closes - but "closed" is not a moment this side of the
+ * connection can trust: paging replaces the whole screen, and reading a menu Minecraft
+ * is midway through tearing down is how you get an empty snapshot over a page that had
+ * things in it. Ticking keeps a copy that is at most one tick stale, so the last one
+ * taken is the closing state whether or not the close is clean.
+ */
+public final class StoragePreview {
+
+    private StoragePreview() {
+    }
+
+    // The two shapes the server uses, both anchored: a page named in passing inside
+    // some other menu's text must not be mistaken for the page item itself.
+    private static final Pattern PAGE_WINDOW = Pattern.compile("^Storage Page \\((\\d+)\\s*/\\s*(\\d+)\\)$");
+    private static final Pattern PAGE_ITEM = Pattern.compile("^Storage Page (\\d+)$");
+
+    /**
+     * The ender chest, kept beside the pages under a page number the server never uses,
+     * so the overview can show it as one more card. It opens with /ec, not /storage.
+     */
+    static final int ENDER_CHEST = 0;
+    private static final String ENDER_CHEST_TITLE = "Ender Chest";
+
+    private static final Map<Integer, PageSnapshot> SNAPSHOTS = new HashMap<>();
+
+    /**
+     * Rows of the page skipped when drawing, counted from the top.
+     *
+     * The server puts its own furniture in the first row - the close barrier and the
+     * page arrows - and that is chrome, not stash. Dropped at draw time rather than at
+     * capture so the snapshot stays a faithful copy of the page; if the server ever
+     * moves its furniture, this is one number rather than a re-capture.
+     */
+    private static final int SKIP_ROWS = 1;
+
+    // ── module state, owned here so the card and the feature cannot disagree ──
+    private static boolean enabled = true;
+    private static boolean capturing = true;
+    private static double delayMs = 200;
+    private static boolean showCounts = true;
+    private static boolean overview = true;
+
+    /** Nudge from the default anchor, set on the placement screen. Resets on restart. */
+    static int offsetX = 0;
+    static int offsetY = 0;
+
+    /** Which page the cursor is resting on and since when, for the hover delay. */
+    private static int hoverPage = -1;
+    private static long hoverSince = 0L;
+
+    /** Most recent page seen, so placement has something real to show. */
+    private static int lastPage = -1;
+
+    public static Module module() {
+        return new Module("storage.preview", "Storage Preview",
+                "Hover a storage page to see inside. Item search.", "Storage",
+                () -> enabled, v -> enabled = v,
+                concat(List.of(
+                        new Setting.Section("Preview"),
+                        new Setting.Toggle("All-page overview",
+                                "Replace the Storage menu with a browsable view of every page.",
+                                () -> overview, v -> overview = v),
+                        StorageOverview.opacitySetting(),
+                        new Setting.Toggle("Snapshot on close",
+                                "Remember each page as you leave it.",
+                                () -> capturing, v -> capturing = v),
+                        new Setting.Slider("Preview delay",
+                                "Hover time before it opens.",
+                                0, 1000, 50, () -> delayMs, v -> delayMs = v, "ms"),
+                        new Setting.Toggle("Show stack sizes",
+                                "Draw the count on each stack.",
+                                () -> showCounts, v -> showCounts = v),
+                        new Setting.Action("Reposition preview",
+                                "Drag the preview where you want it.",
+                                "Move", StoragePreview::openPlacement)),
+                        StorageSearch.settings()));
+    }
+
+    private static List<Setting> concat(List<Setting> a, List<Setting> b) {
+        List<Setting> out = new java.util.ArrayList<>(a);
+        out.addAll(b);
+        return out;
+    }
+
+    private static void openPlacement() {
+        Minecraft mc = Minecraft.getInstance();
+        mc.setScreen(new PreviewPlacementScreen(mc.screen));
+    }
+
+    public static void init() {
+        ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+            if (!(screen instanceof AbstractContainerScreen<?> container)) return;
+
+            // Registered per screen rather than globally because that is the only shape
+            // the screen API offers for these - they hang off a specific screen.
+            ScreenEvents.afterTick(screen).register(s -> capture(container));
+            ScreenEvents.remove(screen).register(s -> {
+                capture(container);
+                if (snapshotScreen == container) {
+                    // Persist the last observation on close, without rewriting the
+                    // entire NBT file repeatedly while an unchanged page stays open.
+                    SnapshotStore.markDirty();
+                    snapshotScreen = null;
+                }
+                if (emptyScreen == container) emptyScreen = null;
+            });
+            ScreenEvents.afterExtract(screen).register(
+                    (s, g, mouseX, mouseY, delta) -> {
+                        draw(container, g);
+                        drawEnderNext(container, g, mouseX, mouseY);
+                    });
+            ScreenMouseEvents.allowMouseClick(screen).register((s, click) -> {
+                if (click.button() != 0 || !enderNextHit(container, click.x(), click.y())) return true;
+                StorageOverview.openPage(container, 1);
+                return false;
+            });
+        });
+    }
+
+    // ── capture ───────────────────────────────────────────────────────────────
+
+    private static void capture(AbstractContainerScreen<?> screen) {
+        if (!enabled || !capturing) return;
+
+        String title = plain(screen.getTitle());
+        Matcher m = PAGE_WINDOW.matcher(title);
+        int page, count;
+        if (m.matches()) {
+            page = parse(m.group(1));
+            count = parse(m.group(2));
+        } else if (title.equals(ENDER_CHEST_TITLE)) {
+            page = ENDER_CHEST;
+            count = 0;
+        } else {
+            return;
+        }
+        if (page < 0) return;
+
+        List<ItemStack> items = containerSlots(screen);
+        if (items.isEmpty()) return;
+
+        // A newly opened window can be all-empty before its contents arrive. Wait for
+        // an empty read to stay stable, but do eventually record a page the player
+        // really cleared instead of showing old items forever.
+        PageSnapshot existing = SNAPSHOTS.get(page);
+        long now = System.currentTimeMillis();
+        if (allEmpty(items) && existing != null && existing.filled() > 0) {
+            if (emptyScreen != screen) {
+                emptyScreen = screen;
+                emptySince = now;
+            }
+            if (now - emptySince < 400) return;
+        } else {
+            emptyScreen = null;
+        }
+
+        boolean unchanged = existing != null && existing.pageCount() == count && sameItems(items, existing.items());
+        // Keeping a window open used to copy every component of every stack twenty
+        // times a second, and dirty the NBT file even when its contents never changed.
+        // Refresh the observation time once a second using the same immutable items.
+        if (unchanged && snapshotScreen == screen && now - existing.capturedAt() < 1000) return;
+        List<ItemStack> saved;
+        if (unchanged) saved = existing.items();
+        else {
+            saved = new ArrayList<>(items.size());
+            for (ItemStack stack : items) saved.add(stack.copy());
+            saved = List.copyOf(saved);
+        }
+        SNAPSHOTS.put(page, new PageSnapshot(page, count, saved, now));
+        snapshotScreen = screen;
+        if (page != ENDER_CHEST) lastPage = page;      // placement previews a storage page
+        if (!unchanged) SnapshotStore.markDirty();
+    }
+
+    private static boolean allEmpty(List<ItemStack> items) {
+        for (ItemStack s : items) {
+            if (!s.isEmpty()) return false;
+        }
+        return true;
+    }
+
+    private static AbstractContainerScreen<?> emptyScreen;
+    private static AbstractContainerScreen<?> snapshotScreen;
+    private static long emptySince;
+
+    static boolean sameItems(List<ItemStack> first, List<ItemStack> second) {
+        if (first == second) return true;
+        if (first == null || second == null || first.size() != second.size()) return false;
+        for (int i = 0; i < first.size(); i++) {
+            ItemStack a = first.get(i), b = second.get(i);
+            if (a.isEmpty() && b.isEmpty()) continue;
+            if (a.getCount() != b.getCount() || !ItemStack.isSameItemSameComponents(a, b)) return false;
+        }
+        return true;
+    }
+
+    /**
+     * The window's own slots, without the player inventory underneath.
+     *
+     * Split by which Container a slot belongs to rather than by index. Index maths
+     * ("the first 54 are the chest") holds for a plain chest and stops holding the
+     * moment the server opens anything else, and this menu is whatever the server says
+     * it is.
+     */
+    private static List<ItemStack> containerSlots(AbstractContainerScreen<?> screen) {
+        Minecraft mc = Minecraft.getInstance();
+        Container playerInv = mc.player == null ? null : mc.player.getInventory();
+
+        List<ItemStack> out = new ArrayList<>();
+        try {
+            for (Slot slot : screen.getMenu().slots) {
+                if (slot.container == playerInv) continue;
+                out.add(slot.getItem());
+            }
+        } catch (RuntimeException ignored) {
+            // Reached from remove(), where the menu may already be half torn down. A
+            // missed snapshot is a stale preview; throwing here would take the screen
+            // down with it.
+            return List.of();
+        }
+        return out;
+    }
+
+    // ── geometry ──────────────────────────────────────────────────────────────
+
+    static final int CELL = 18;
+    static final int PAD = 8;
+    static final int HEADER = 16;
+
+    /**
+     * Air between the panel and the game's own window.
+     *
+     * The first pass sat the panel flush on the window, covering the row of arrows and
+     * the close button on the grounds that nobody reads them. It was correct and it
+     * looked wrong - two panels touching read as one badly-drawn panel, and the seam is
+     * the first thing the eye finds. A gap costs nothing and stops it looking pasted on.
+     */
+    static final int GAP = 6;
+
+    /**
+     * Where the game's storage window last was, remembered so the placement screen has
+     * a real frame to aim at instead of a guess.
+     *
+     * Absolute screen coordinates rather than an offset from centre, because that is
+     * what the panel is positioned against and the two must not drift apart. They only
+     * hold while the GUI scale is unchanged, which is the case for anything short of
+     * changing video settings mid-placement.
+     */
+    static int[] frameCells;      // x,y pairs for the container's own slots
+    static int frameGridLeft = -1;
+    static int frameWindowTop = -1;
+    static int frameRows = 6;
+
+    /**
+     * Panel rectangle for a given anchor, recomputed every time it is needed.
+     *
+     * Not cached between frames even though drawing and dragging both want it, because
+     * the window moves when the game window is resized and a stale rectangle would then
+     * be catching drags where nothing is drawn.
+     */
+    static int[] boundsAt(int gridLeft, int windowTop, int rows, int screenW, int screenH) {
+        int w = PageSnapshot.COLS * CELL + PAD * 2;
+        int h = PAD + HEADER + rows * CELL + PAD;
+
+        // Columns aligned to the window's columns, floating a gap clear of the top of it.
+        int x = gridLeft - PAD + offsetX;
+        int y = windowTop - GAP - h + offsetY;
+
+        x = clamp(x, 4, Math.max(4, screenW - w - 4));
+        y = clamp(y, 4, Math.max(4, screenH - h - 4));
+        return new int[]{x, y, w, h};
+    }
+
+    /** Records where this window is, and returns the panel rectangle for it. */
+    private static int[] bounds(AbstractContainerScreen<?> screen, int rows) {
+        Minecraft mc = Minecraft.getInstance();
+        Container playerInv = mc.player == null ? null : mc.player.getInventory();
+
+        int count = 0;
+        int minX = Integer.MAX_VALUE;
+        for (Slot slot : screen.getMenu().slots) {
+            if (slot.container == playerInv) continue;
+            minX = Math.min(minX, slot.x);
+            count++;
+        }
+        if (minX == Integer.MAX_VALUE) return null;
+
+        frameGridLeft = screen.leftPos + minX;
+        frameWindowTop = screen.topPos;
+        frameRows = Math.max(1, count / PageSnapshot.COLS);
+        if (frameCells == null || frameCells.length != count * 2) frameCells = new int[count * 2];
+        int i = 0;
+        for (Slot slot : screen.getMenu().slots) {
+            if (slot.container == playerInv) continue;
+            frameCells[i++] = screen.leftPos + slot.x;
+            frameCells[i++] = screen.topPos + slot.y;
+        }
+
+        return boundsAt(frameGridLeft, frameWindowTop, rows, screen.width, screen.height);
+    }
+
+    /** Rows actually drawn: the page minus the server's furniture row. */
+    static int drawnRows(PageSnapshot snap) {
+        return snap == null ? Math.max(1, frameRows - SKIP_ROWS) : Math.max(1, snap.rows() - SKIP_ROWS);
+    }
+
+    /** The live map, for SnapshotStore to read on save and fill on load. */
+    public static Map<Integer, PageSnapshot> snapshots() {
+        return SNAPSHOTS;
+    }
+
+    static boolean overviewEnabled() {
+        return enabled && overview;
+    }
+
+    /** The most recent page seen, for the placement screen to show something real. */
+    static PageSnapshot lastSnapshot() {
+        return SNAPSHOTS.get(lastPage);
+    }
+
+    // ── draw ──────────────────────────────────────────────────────────────────
+
+    private static boolean enderNextHit(AbstractContainerScreen<?> screen, double mx, double my) {
+        if (!enabled || !isEnderChest(screen)) return false;
+        int x = screen.leftPos + screen.imageWidth - 24, y = screen.topPos + 3;
+        return mx >= x && mx < x + 18 && my >= y && my < y + 12;
+    }
+
+    private static void drawEnderNext(AbstractContainerScreen<?> screen, GuiGraphicsExtractor g, int mx, int my) {
+        if (!enabled || !isEnderChest(screen)) return;
+        int x = screen.leftPos + screen.imageWidth - 24, y = screen.topPos + 3;
+        boolean hovered = enderNextHit(screen, mx, my);
+        // Keep navigation in the title bar, so no chest item or server control is covered.
+        g.nextStratum();
+        Draw.roundedOutline(g, x, y, 18, 12, 3, hovered ? Theme.accent() : Theme.line(),
+                hovered ? Theme.hover() : Theme.surface());
+        Font font = Minecraft.getInstance().font;
+        Draw.textCentered(g, font, ">", x + 9, y + 2, hovered ? Theme.accent() : Theme.text());
+        if (hovered) {
+            g.setTooltipForNextFrame(font, Component.literal("Next page: PV 1"), mx, my);
+            g.extractDeferredElements(mx, my, 0f);
+        }
+    }
+
+    private static void draw(AbstractContainerScreen<?> screen, GuiGraphicsExtractor g) {
+        if (!enabled) {
+            hoverPage = -1;
+            return;
+        }
+
+        // hoveredSlot rather than a hit test of our own: it is already correct about
+        // inactive and scrolled-away slots, and it is set during the same extract pass
+        // this runs at the end of.
+        Slot slot = screen.hoveredSlot;
+        int page = slot == null ? -1 : pageOf(slot.getItem());
+        if (page != hoverPage) {
+            hoverPage = page;
+            hoverSince = System.currentTimeMillis();
+        }
+
+        PageSnapshot snap = SNAPSHOTS.get(page);
+
+        // The frame is recorded on every container screen, hovered or not, so opening
+        // Storage once is enough to teach the placement screen where the window sits.
+        int[] b = bounds(screen, drawnRows(snap));
+        if (page < 0 || b == null) return;
+        if (page >= 0) lastPage = page;
+
+        long now = System.currentTimeMillis();
+        if (now - hoverSince < (long) delayMs) return;
+
+        // Above what is already drawn, so the panel is not buried under the slot grid
+        // it is sitting on top of.
+        g.nextStratum();
+        drawPanel(g, snap, b, now, false);
+    }
+
+    /**
+     * The panel itself. Shared with the placement screen so what you place is exactly
+     * what you later see - a separate "preview of the preview" would drift.
+     */
+    static void drawPanel(GuiGraphicsExtractor g, PageSnapshot snap, int[] b, long now, boolean placing) {
+        Font font = Minecraft.getInstance().font;
+        int x = b[0], y = b[1], w = b[2], h = b[3];
+        int rows = drawnRows(snap);
+
+        // Themed rather than grey. A plain hairline border is the correct colour and
+        // reads as a debug box - the palette is the only thing tying this panel to the
+        // rest of the mod, since it is drawn over the game rather than inside a screen
+        // anyone would recognise. At rest the border sits halfway to accent so it is
+        // tinted without shouting; while placing it goes the whole way and gains a ring.
+        int border = placing ? Theme.accent() : Draw.lerp(Theme.line(), Theme.accent(), 0.55f);
+        if (placing) {
+            Draw.roundedRect(g, x - 2, y - 2, w + 4, h + 4, Theme.RADIUS + 2,
+                    Draw.alpha(Theme.accent(), 0.22f));
+        }
+        Draw.roundedOutline(g, x, y, w, h, Theme.RADIUS, border, Theme.surface());
+
+        String title;
+        String right;
+        if (snap == null) {
+            title = "Storage Preview";
+            right = placing ? "drag to place" : "no snapshot";
+        } else {
+            title = "Storage Page " + snap.page()
+                    + (snap.pageCount() > 0 ? " / " + snap.pageCount() : "");
+            right = placing ? "drag to place" : snap.age(now);
+        }
+        Draw.text(g, font, title, x + PAD, y + PAD, placing ? Theme.accent() : Theme.text());
+        Draw.textRight(g, font, right, x + w - PAD, y + PAD,
+                placing ? Theme.accent() : Theme.dim());
+
+        // Splits header from grid. Without it the title floats over the cells and the
+        // panel reads as one undifferentiated box.
+        Draw.rect(g, x + PAD, y + PAD + 11, w - PAD * 2, 1, Draw.alpha(Theme.accent(), 0.35f));
+
+        int gx = x + PAD;
+        int gy = y + PAD + HEADER;
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < PageSnapshot.COLS; c++) {
+                int cx = gx + c * CELL;
+                int cy = gy + r * CELL;
+                Draw.roundedRect(g, cx, cy, CELL - 2, CELL - 2, 2, Theme.input());
+
+                if (snap == null) continue;
+                ItemStack stack = snap.at((r + SKIP_ROWS) * PageSnapshot.COLS + c);
+                if (stack.isEmpty()) continue;
+                g.item(stack, cx, cy);
+                if (showCounts) g.itemDecorations(font, stack, cx, cy);
+            }
+        }
+    }
+
+    // ── helpers ───────────────────────────────────────────────────────────────
+
+
+    // ── shared with StorageSearch ─────────────────────────────────────────────
+
+    /** True for the root Storage menu and for any single page of it. */
+    static boolean isStorageWindow(AbstractContainerScreen<?> screen) {
+        String t = plain(screen.getTitle());
+        return t.equals("Storage") || PAGE_WINDOW.matcher(t).matches();
+    }
+
+    static boolean isEnderChest(AbstractContainerScreen<?> screen) {
+        return plain(screen.getTitle()).equals(ENDER_CHEST_TITLE);
+    }
+
+    static int pageOfItem(ItemStack stack) {
+        return pageOf(stack);
+    }
+
+    static boolean hasSnapshot(int page) {
+        return SNAPSHOTS.containsKey(page);
+    }
+
+    /** How many stacks in a remembered page match, furniture row excluded. */
+    static int matchesIn(int page, String query) {
+        PageSnapshot snap = SNAPSHOTS.get(page);
+        return searchMatches(snap, query).cardinality();
+    }
+
+    private record SearchMatch(List<ItemStack> items, BitSet slots) { }
+    private static String matchQuery = "";
+    private static final Map<Integer, SearchMatch> matchCache = new HashMap<>();
+    private static final BitSet NO_MATCHES = new BitSet();
+
+    /** A single pass answers both the page count and every highlighted slot. */
+    static BitSet searchMatches(PageSnapshot snap, String query) {
+        String normalized = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        if (!normalized.equals(matchQuery)) {
+            matchQuery = normalized;
+            matchCache.clear();
+        }
+        if (snap == null || normalized.isEmpty()) return NO_MATCHES;
+        SearchMatch cached = matchCache.get(snap.page());
+        if (cached != null && cached.items() == snap.items()) return cached.slots();
+        BitSet slots = new BitSet(snap.items().size());
+        for (int i = SKIP_ROWS * PageSnapshot.COLS; i < snap.items().size(); i++) {
+            ItemStack stack = snap.at(i);
+            if (!stack.isEmpty() && plain(stack.getHoverName()).toLowerCase(Locale.ROOT).contains(normalized))
+                slots.set(i);
+        }
+        // Page numbers are bounded by the server menu in normal use; cap the cache
+        // too so stale snapshots from another server cannot accumulate indefinitely.
+        if (matchCache.size() >= 128) matchCache.clear();
+        matchCache.put(snap.page(), new SearchMatch(snap.items(), slots));
+        return slots;
+    }
+
+    static String plainText(Component c) {
+        return plain(c);
+    }
+
+    static String plainText(String text) {
+        return text == null ? "" : LEGACY_FORMAT.matcher(text).replaceAll("").trim();
+    }
+
+    static int pageNumber(String title) {
+        Matcher m = PAGE_ITEM.matcher(plainText(title));
+        return m.matches() ? parse(m.group(1)) : -1;
+    }
+
+    private static int pageOf(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return -1;
+        return pageNumber(stack.getHoverName().getString());
+    }
+
+    /**
+     * Component text with formatting removed.
+     *
+     * getString() drops styles that arrived as style objects, but a server is free to
+     * put legacy section codes in the literal text and this one does colour its titles,
+     * so both have to go or every match fails on an invisible prefix.
+     */
+    private static String plain(Component c) {
+        if (c == null) return "";
+        return plainText(c.getString());
+    }
+
+    private static final Pattern LEGACY_FORMAT = Pattern.compile("§[0-9A-Fa-fK-Ok-orRxX]");
+
+    private static int parse(String s) {
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    static int clamp(int v, int lo, int hi) {
+        return Math.max(lo, Math.min(Math.max(lo, hi), v));
+    }
+}

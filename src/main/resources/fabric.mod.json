@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "dragsimutils",
+  "version": "${version}",
+  "name": "Dragsim Utils",
+  "description": "Client-side trackers, profile viewing and quality-of-life tools for Dragsim.",
+  "authors": [
+    "Fear"
+  ],
+  "license": "ARR",
+  "environment": "client",
+  "accessWidener": "dragsimutils.accesswidener",
+  "mixins": [
+    {
+      "config": "dragsimutils.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "entrypoints": {
+    "client": [
+      "com.dragsimutils.DragsimUtilsClient"
+    ]
+  },
+  "custom": {
+    "dragsimutils:commit": "${commit}"
+  },
+  "depends": {
+    "fabricloader": ">=0.19.1",
+    "minecraft": "~26.1.2",
+    "java": ">=25",
+    "fabric-api": ">=0.155.0"
+  },
+  "icon": "assets/dragsimutils/icon.png",
+  "contact": {
+    "homepage": "https://github.com/RealZones/DragsimUtils",
+    "sources": "https://github.com/RealZones/DragsimUtils",
+    "issues": "https://github.com/RealZones/DragsimUtils/issues"
+  },
+  "breaks": {
+    "endsight": "*"
+  }
+}

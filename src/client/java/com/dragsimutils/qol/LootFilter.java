@@ -1,0 +1,84 @@
+package com.dragsimutils.qol;
+
+import com.dragsimutils.ui.Module;
+import com.dragsimutils.ui.Setting;
+import com.dragsimutils.zealots.Zealots;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Hides the loot numbers that do not matter.
+ *
+ * With /debug on, every kill prints "loot number: 93.96443" - one roll from 0 to 100
+ * against the loot table, and the rare things sit at the bottom of it: the Null Atom
+ * and the Enderman pet in the logs both landed under 0.11. So the line is only worth
+ * reading when the roll is low, and the other hundred a minute are chat scrolling by.
+ * Rolls at or above the number are dropped before they reach chat; the ones under it
+ * stay, so a close call is still there to see. The top end is kept too, by default:
+ * the roll is uniform (in a thousand logged rolls, fourteen were under 1 and thirteen
+ * over 99), so a 99.98 is exactly as rare as a 0.02 - it just did not drop anything,
+ * which is the whole joke of posting one.
+ *
+ * A roll that actually dropped something reads "loot number: 0.10838 → Null Atom",
+ * and never matches here - it is the line the drop trackers read, and it is the one
+ * line you would not want hidden anyway.
+ *
+ * /debug detailed is judged in {@link LootRoll}, a whole kill at a time. Hiding just
+ * its loot number line here left the table, the result and the rare roll under it,
+ * so the filter looked like it did nothing in that mode.
+ */
+public final class LootFilter {
+
+    private LootFilter() {
+    }
+
+    private static boolean enabled = false;
+    private static double showUnder = 2.5;
+    private static boolean bothEnds = true;
+
+    /** A bare roll: the number and nothing after it. The arrow of a real drop keeps it from matching. */
+    private static final Pattern ROLL = Pattern.compile("^\\s*loot number:\\s*([\\d.]+)\\s*$");
+
+    public static Module module() {
+        return new Module("qol.lootfilter", "Loot Number Filter",
+                "Hides loot numbers except the close calls.", "Chat",
+                () -> enabled, v -> enabled = v,
+                List.of(
+                        new Setting.Slider("Show under",
+                                "Only loot numbers under this show. Drops always show.",
+                                0, 50, 0.5, () -> showUnder, v -> showUnder = v, ""),
+                        new Setting.Toggle("Both ends",
+                                "Also show rolls just as close to 100.",
+                                () -> bothEnds, v -> bothEnds = v)));
+    }
+
+    static boolean on() {
+        return enabled;
+    }
+
+    /** The one rule, for every number: low enough, or as close to 100 when both ends count. */
+    static boolean shows(double roll) {
+        return roll < showUnder || (bothEnds && roll >= 100 - showUnder);
+    }
+
+    static Double roll(String line) {
+        Double modern = LootDebug.normalRoll(line.trim());
+        if (modern != null) return modern;
+        Matcher m = ROLL.matcher(line);
+        if (!m.find()) return null;
+        try { return Double.valueOf(m.group(1)); }
+        catch (NumberFormatException e) { return null; }
+    }
+
+    public static void init() {
+        ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
+            // A dragon's detailed block has a bare loot number too; LootRoll judges it with the rest.
+            if (!enabled || overlay || LootRoll.busy()) return true;
+            Double value = roll(Zealots.strip(message.getString()));
+            return value == null || shows(value);
+        });
+    }
+}

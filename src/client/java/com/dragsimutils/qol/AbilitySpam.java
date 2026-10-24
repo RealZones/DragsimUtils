@@ -1,0 +1,108 @@
+package com.dragsimutils.qol;
+
+import com.dragsimutils.ui.Module;
+import com.dragsimutils.ui.Setting;
+import com.dragsimutils.zealots.Zealots;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.multiplayer.chat.GuiMessage;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+
+import java.util.List;
+
+/**
+ * Repeated ability refusals, once instead of forty times.
+ *
+ * A held right-click on a one-second item is refused five times a second, and every
+ * refusal is a red line, so a fight's chat is mostly this. Two ways out: stack them -
+ * the newest refusal replaces the last one and carries a count, so the line reads
+ * "This ability is on cooldown for 4.45s  x3" and stays one line until something
+ * else is said - or hide them outright.
+ *
+ * Stacking edits chat in place, which vanilla offers no way to do: messages can only
+ * be added, or deleted by signature, and a server line has none. So the previous
+ * stacked line is pulled out of the chat's own list (widened for the purpose) before
+ * the new one goes in. Other modules that read the refusal - the zealot tracker
+ * withdraws a click the server refused - still see it, on the canceled-message event.
+ */
+public final class AbilitySpam {
+
+    private AbilitySpam() {
+    }
+
+    private static final String STACK = "Stack";
+    private static final String HIDE = "Hide";
+    private static final String COOLDOWN = "This ability is on cooldown";
+    private static final String SALVATION_MISS = "Salvation found nothing in its path.";
+
+    private static boolean enabled = true;
+    private static String mode = STACK;
+    private static boolean goopBoss;
+
+    /** The line currently standing in for the refusals, and how many it stands for. */
+    private static Component stacked;
+    private static String stackedKind;
+    private static int count;
+
+    public static Module module() {
+        return new Module("qol.abilityspam", "Ability Spam",
+                "Stack ability messages and hide Goop boss chat.", "Chat",
+                () -> enabled, v -> enabled = v,
+                List.of(
+                        new Setting.Choice("Mode",
+                                "Stack: one line with a count. Hide: none.",
+                                List.of(STACK, HIDE), () -> mode, v -> mode = v),
+                        new Setting.Toggle("Goop boss",
+                                "Hide dialogue and warnings; keep placer, results and loot.",
+                                () -> goopBoss, v -> goopBoss = v)));
+    }
+
+    public static void init() {
+        ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
+            if (!enabled || overlay) return true;
+            String line = Zealots.strip(message.getString()).trim();
+            // Boss narration is hidden as a whole, even when ability refusals
+            // are set to Stack. Loot and normal player chat still pass through.
+            if (goopBoss && goopMessage(line)) return false;
+            String kind = line.startsWith(COOLDOWN) ? COOLDOWN
+                    : line.equals(SALVATION_MISS) ? SALVATION_MISS : null;
+            if (kind == null) return true;
+            if (!HIDE.equals(mode)) stack(message, kind);
+            return false;
+        });
+    }
+
+    static boolean goopMessage(String line) {
+        return GoopChat.hide(line);
+    }
+
+    /**
+     * Replace the last stacked line, if it is still the newest thing in chat, with this
+     * refusal and a count one higher; otherwise start a fresh line at one. "Still the
+     * newest" is what keeps a refusal from being folded into one from before somebody
+     * spoke, which would read as chat history being rewritten.
+     */
+    private static void stack(Component message, String kind) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.gui == null) return;
+        ChatComponent chat = mc.gui.getChat();
+        List<GuiMessage> all = chat.allMessages;
+        // A Terminator miss must not turn the cooldown line's count into its own.
+        if (stacked != null && kind.equals(stackedKind)
+                && !all.isEmpty() && all.get(0).content() == stacked) {
+            all.remove(0);
+            chat.refreshTrimmedMessages();
+            count++;
+        } else {
+            count = 1;
+        }
+        MutableComponent line = Component.empty().append(message);
+        if (count > 1) line.append(Component.literal("  x" + count).withStyle(ChatFormatting.GRAY));
+        stacked = line;
+        stackedKind = kind;
+        chat.addServerSystemMessage(line);
+    }
+}

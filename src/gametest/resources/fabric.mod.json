@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "dragsimutils-profile-tests",
+  "version": "1.0.0",
+  "name": "Dragsim Utils profile render checks",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-client-gametest": ["com.dragsimutils.profile.ProfileVisualTest", "com.dragsimutils.storage.CacheVisualTest", "com.dragsimutils.dungeon.DungeonMapVisualTest", "com.dragsimutils.dungeon.KeyAlertVisualTest"]
+  },
+  "depends": {"dragsimutils": "*", "fabric-client-gametest-api-v1": "*"}
+}

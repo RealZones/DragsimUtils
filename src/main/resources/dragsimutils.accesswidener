@@ -1,0 +1,45 @@
+accessWidener	v2	official
+
+# Storage Preview has to know where a container screen's slots sit on screen and
+# which one the mouse is over. All three are protected on AbstractContainerScreen and
+# Fabric API exposes no accessor for them. Widened rather than mixed in: a mixin would
+# be an interface, three accessor methods and a mixins.json for the same three reads,
+# and mixins into vanilla render classes are the first thing to break on a MC update.
+accessible	field	net/minecraft/client/gui/screens/inventory/AbstractContainerScreen	leftPos	I
+accessible	field	net/minecraft/client/gui/screens/inventory/AbstractContainerScreen	topPos	I
+accessible	field	net/minecraft/client/gui/screens/inventory/AbstractContainerScreen	hoveredSlot	Lnet/minecraft/world/inventory/Slot;
+
+# Damage Numbers rewrites a text_display's text on this client and switches one off by
+# zeroing its view range. Both live in Display's synched data behind private accessors,
+# and there is no public setter for either - Display exposes only a read-only render
+# state, which is a snapshot the renderer builds and not the value it is built from.
+accessible	field	net/minecraft/world/entity/Display$TextDisplay	DATA_TEXT_ID	Lnet/minecraft/network/syncher/EntityDataAccessor;
+accessible	field	net/minecraft/world/entity/Display	DATA_VIEW_RANGE_ID	Lnet/minecraft/network/syncher/EntityDataAccessor;
+
+# Ability Spam replaces the last cooldown line with one carrying a count. Vanilla chat
+# can add a message or delete one by signature, and a server line has no signature, so
+# the previous line has to come out of the list itself, and the trimmed copy rebuilt.
+accessible	field	net/minecraft/client/gui/components/ChatComponent	allMessages	Ljava/util/List;
+accessible	method	net/minecraft/client/gui/components/ChatComponent	refreshTrimmedMessages	()V
+
+# Copy Chat finds the line under a right-click with the same arithmetic vanilla draws
+# them by, then copies the whole message that row belongs to.
+accessible	field	net/minecraft/client/gui/components/ChatComponent	trimmedMessages	Ljava/util/List;
+accessible	field	net/minecraft/client/gui/components/ChatComponent	chatScrollbarPos	I
+
+# Recipes hangs its panel off the right edge of the inventory window, which is the
+# window's own size - protected, and nothing public says it.
+accessible	field	net/minecraft/client/gui/screens/inventory/AbstractContainerScreen	imageWidth	I
+accessible	field	net/minecraft/client/gui/screens/inventory/AbstractContainerScreen	imageHeight	I
+
+# Ability Cooldowns reads the action bar - "-100 Mana (Giant's Slam)" is the one line
+# that says an ability fired. A server sets it with its own packet, which never passes
+# the chat listener, so no message event sees it: the text has to be read off the Gui.
+# The timer resets whenever a new one is set, which is how a repeat of the same text
+# is told from the old one still showing.
+accessible	field	net/minecraft/client/gui/Gui	overlayMessageString	Lnet/minecraft/network/chat/Component;
+accessible	field	net/minecraft/client/gui/Gui	overlayMessageTime	I
+
+# Key Alerts reads the item an item_display shows, to tell a floating Wither or Blood Key
+# from any other display. The getter is private and there is no public one.
+accessible	method	net/minecraft/world/entity/Display$ItemDisplay	getItemStack	()Lnet/minecraft/world/item/ItemStack;

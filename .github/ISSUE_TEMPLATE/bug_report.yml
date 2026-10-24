@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a reproducible problem in Dragsim Utils.
+title: "[Bug] "
+body:
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Include Dragsim Utils, Minecraft, Fabric Loader, Fabric API and Java versions.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe what you saw and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the actions and relevant settings needed to reproduce the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or relevant logs
+      description: Add useful screenshots or a redacted log excerpt. Remove account credentials and private information before sharing.

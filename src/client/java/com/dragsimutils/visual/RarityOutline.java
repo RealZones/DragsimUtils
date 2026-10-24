@@ -1,0 +1,115 @@
+package com.dragsimutils.visual;
+
+import com.dragsimutils.qol.Rarity;
+import com.dragsimutils.ui.Draw;
+import com.dragsimutils.ui.Module;
+import com.dragsimutils.ui.Setting;
+import com.dragsimutils.ui.Theme;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+
+import java.util.List;
+
+/**
+ * Every item, in every window and on the hotbar, with a ring of its rarity's colour
+ * on the slot's border - the one pixel round an item that nothing ever covers.
+ *
+ * Drawn from inside the game's own slot drawing - {@code extractSlot} on the container
+ * screen and on the HUD - just before it draws the item, so the colour sits behind the
+ * icon and under any tooltip. The first version drew after the screen was done: the
+ * rings landed on top of tooltips, and there was nothing to draw on the hotbar with.
+ * That is why this is the one place the public mod uses mixins.
+ *
+ * The colour comes from the same server item-data reader as the drop readouts,
+ * including when the resource pack draws rarity and type in separate tooltip badges.
+ */
+public final class RarityOutline {
+
+    private RarityOutline() {
+    }
+
+    private static boolean enabled = true;
+    private static final List<String> STYLES = List.of("Corners", "Outline", "Glow", "Pixel");
+    private static String style = "Corners";
+    private static double opacity = 0.75;
+
+    public static Module module() {
+        return new Module("visual.rarity", "Rarity Outlines",
+                "Rarity colour round every item, in windows and on the hotbar.", "Visual",
+                () -> enabled, v -> enabled = v,
+                List.of(
+                        new Setting.Choice("Style", "Corners, outlines, glow or a stepped pixel background.",
+                                STYLES, () -> style, v -> style = v),
+                        new Setting.Slider("Opacity", "How solid the rarity highlight is.",
+                                0.2, 1, 0.05, () -> opacity, v -> opacity = v, "")));
+    }
+
+    public static void init() {
+    }
+
+    /** Called from the container screen's slot drawing, under the window's own translation. */
+    public static void behindSlot(GuiGraphicsExtractor g, Slot slot) {
+        behind(g, slot.x, slot.y, slot.getItem());
+    }
+
+    /** Called from the HUD's hotbar slot drawing, with the item's own corner. */
+    public static void behindHotbar(GuiGraphicsExtractor g, int x, int y, ItemStack stack) {
+        behind(g, x, y, stack);
+    }
+
+    private static void behind(GuiGraphicsExtractor g, int x, int y, ItemStack stack) {
+        if (!enabled || stack.isEmpty()) return;
+        int colour = Rarity.of(stack);
+        if (colour == 0) return;
+        int c = Draw.alpha(colour | 0xFF000000, (float) opacity);
+        switch (style) {
+            case "Outline" -> frame(g, x - 1, y - 1, 18, 18, c);
+            case "Glow" -> glow(g, x - 2, y - 2, 20, 20, colour | 0xFF000000);
+            case "Pixel" -> pixel(g, x - 1, y - 1, colour | 0xFF000000);
+            default -> corners(g, x - 1, y - 1, 18, 18, c);
+        }
+    }
+
+    /** A one-pixel ring with its corner pixels left out, which is what makes it read rounded. */
+    private static void frame(GuiGraphicsExtractor g, int x, int y, int w, int h, int colour) {
+        Draw.rect(g, x + 1, y, w - 2, 1, colour);
+        Draw.rect(g, x + 1, y + h - 1, w - 2, 1, colour);
+        Draw.rect(g, x, y + 1, 1, h - 2, colour);
+        Draw.rect(g, x + w - 1, y + 1, 1, h - 2, colour);
+    }
+
+    /** Four short Ls: enough to identify rarity without boxing every icon in. */
+    private static void corners(GuiGraphicsExtractor g, int x, int y, int w, int h, int colour) {
+        int n = 5;
+        Draw.rect(g, x + 1, y, n, 1, colour);
+        Draw.rect(g, x, y + 1, 1, n, colour);
+        Draw.rect(g, x + w - 1 - n, y, n, 1, colour);
+        Draw.rect(g, x + w - 1, y + 1, 1, n, colour);
+        Draw.rect(g, x + 1, y + h - 1, n, 1, colour);
+        Draw.rect(g, x, y + h - 1 - n, 1, n, colour);
+        Draw.rect(g, x + w - 1 - n, y + h - 1, n, 1, colour);
+        Draw.rect(g, x + w - 1, y + h - 1 - n, 1, n, colour);
+    }
+
+    /** The loud version: a faint halo plus the normal frame. */
+    private static void glow(GuiGraphicsExtractor g, int x, int y, int w, int h, int colour) {
+        frame(g, x, y, w, h, Draw.alpha(colour, (float) opacity * 0.35f));
+        frame(g, x + 1, y + 1, w - 2, h - 2, Draw.alpha(colour, (float) opacity));
+    }
+
+    private static void pixel(GuiGraphicsExtractor g, int x, int y, int colour) {
+        // Two-pixel steps read like Minecraft sprites rather than a smooth circular halo.
+        badge(g, x, y, 18, Draw.alpha(colour, (float) opacity * 0.65f));
+        badge(g, x + 1, y + 1, 16,
+                Draw.alpha(Draw.lerp(Theme.bg(), colour, 0.32f), (float) opacity));
+    }
+
+    private static void badge(GuiGraphicsExtractor g, int x, int y, int size, int colour) {
+        Draw.rect(g, x + 4, y, size - 8, 2, colour);
+        Draw.rect(g, x + 2, y + 2, size - 4, 2, colour);
+        Draw.rect(g, x, y + 4, size, size - 8, colour);
+        Draw.rect(g, x + 2, y + size - 4, size - 4, 2, colour);
+        Draw.rect(g, x + 4, y + size - 2, size - 8, 2, colour);
+    }
+}

@@ -1,0 +1,385 @@
+package com.dragsimutils.qol;
+
+import com.dragsimutils.dragons.DragonTimer;
+import com.dragsimutils.zealots.Zealots;
+import net.fabricmc.loader.api.FabricLoader;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Reads a drop out of a chat line and says how much it matters, for the tracker and
+ * the copier to share.
+ *
+ * <h2>Tiers are yours, not the game's</h2>
+ * The game colours Aspect of the Dragons gold and drops it one kill in fourteen. Nobody
+ * wants a line for that. So the tier of a drop comes from a list you keep - shipped
+ * with a default built from the bestiary, copied to {@code config/dragsimutils/drops.txt}
+ * on first run, and read from there after - set by rarity and value together, the way
+ * the old 1.8.9 alerter's categories were. New items get a line in that file, not a
+ * new build.
+ *
+ * <h2>The two shapes a drop takes in chat</h2>
+ * The server's announcement - "RARE DROP! (Summoning Eye) (✯ 239%)", "EPIC DROP!
+ * Golden Eye" - and, with /debug on, the kill line "loot number: 7 → Golden Eye". An
+ * item not in your list falls back to the announcement's tier word, or on a /debug line
+ * to the item's colour, so a brand new item still lands somewhere sensible.
+ */
+public final class Drops {
+
+    private Drops() {
+    }
+
+    public static final List<String> TIERS = List.of("Any drop", "Rare and up", "Epic and up", "Legendary and up");
+
+    public record Drop(String item, int tier, int quantity) {
+        public Drop(String item, int tier) { this(item, tier, 1); }
+    }
+
+    /** Match longest name first, but retain the player's line order for HUD ties. */
+    private record Rule(String name, String needle, int tier, int order) {
+    }
+
+    /** Anchored: only tier words may come before DROP!, so a speaker in front fails it. */
+    private static final Pattern ANNOUNCE = Pattern.compile("^([A-Z][A-Z ]*?)\\s*DROP!\\s*\\(?([^()]+?)\\)?\\s*(\\(.*)?$");
+    /** The bracket a pet drop ends with: "(Uncommon)", "(Legendary)". Its own rarity, not the family's. */
+    private static final Pattern RARITY_NOTE =
+            Pattern.compile("\\((?:COMMON|UNCOMMON|RARE|EPIC|LEGENDARY|MYTHIC)\\)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern LOOT = Pattern.compile("loot number:[^→]*→\\s*(?:§[k-or])*(§[0-9a-f])?(.+)$");
+    private static final Pattern MODERN_LOOT = Pattern.compile("^(?:Roll\\s+[\\d.]+/100|MF\\s+[\\d.]+\\s+PL\\s+[\\d.]+\\s+Table\\s+[\\d.]+/100)\\s+→\\s+.+$");
+    private static final Pattern SIDE_FRAGS = Pattern.compile("(?:\\s|§.)+\\+(?:\\s|§.)*[\\d,]+(?:\\s|§.)+frags(?:\\s|§.)*$");
+    /** A pet drop carries its level: "[Lvl 1] Ender Dragon". Its rarity is not in the name. */
+    private static final Pattern PET_LEVEL = Pattern.compile("\\[Lvl \\d+\\]");
+    private static final Pattern BONUS = Pattern.compile("^BONUS! You received ([\\d,]+)x (.+)!$");
+    private static final Pattern SUFFIX_AMOUNT = Pattern.compile("^(.+?)\\s+[x×]([\\d,]+)$");
+    private static final Pattern PREFIX_AMOUNT = Pattern.compile("^([\\d,]+)x\\s+(.+)$");
+
+    /** Longest needle first, so "Golden Hot Potato Book" wins over "Hot Potato Book". */
+    private static List<Rule> rules;
+
+    private static final DropDeduplicator deduplicator = new DropDeduplicator();
+    private static long messageId, lastMessageId = -1;
+    /** The last line asked about and its answer, for the next module asking about the same line. */
+    private static String lastRaw = "";
+    private static Drop lastResult;
+    private static long lastRawAt;
+
+    public static void init() {
+        // Register before drop consumers. Identical text can be two real messages;
+        // only consumers of the SAME event should share its cached result.
+        net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (!overlay) messageId++;
+        });
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            messageId++;
+            deduplicator.clear();
+        });
+    }
+
+    /**
+     * The drop in this line, or null if it is not one - or if it is the one just seen.
+     * {@code raw} keeps its colour codes.
+     *
+     * With /debug on, one drop is two lines a tick apart: "loot number: 57 → Golden
+     * Eye" and then "EPIC DROP! Golden Eye". Pair those two sources; two announcements
+     * or an additional bonus are separate rewards, even when their item names match.
+     *
+     * The /debug line only counts for an item in your list. Its colour is not the
+     * rarity - the log shows a §a Hot Potato Book on the loot line and a §5 one on the
+     * announcement - so for anything unlisted the announcement, with its tier word, is
+     * the one to trust, and it always follows.
+     */
+    public static Drop parse(String raw) {
+        return parseMessage(raw, messageId, System.currentTimeMillis());
+    }
+
+    static Drop parseMessage(String raw, long id, long now) {
+        if (raw.equals(lastRaw) && id == lastMessageId && (id != 0 || now - lastRawAt < 100)) return lastResult;
+        lastRaw = raw;
+        lastRawAt = now;
+        lastMessageId = id;
+        return lastResult = read(raw, now);
+    }
+
+    private static Drop read(String raw, long now) {
+        String line = Zealots.strip(raw).trim();
+        // Someone pasting their drop into chat is "[MVP+] Name: EPIC DROP! Golden Eye",
+        // which is not your drop. The server's own line has no speaker in front of it.
+        if (DragonTimer.isPlayerChat(line)) return null;
+        Drop bonus = bonus(raw);
+        if (bonus != null) return once(new Drop(bonus.item(), tierOf(bonus.item()), bonus.quantity()), DropDeduplicator.Source.BONUS, now);
+        Matcher a = ANNOUNCE.matcher(line);
+        if (a.find()) {
+            ItemAmount amount = itemAmount(a.group(2).trim());
+            if (amount == null) return null;
+            String item = amount.item();
+            DropDeduplicator.Source source = a.group(1).contains("BONUS")
+                    ? DropDeduplicator.Source.BONUS : DropDeduplicator.Source.ANNOUNCEMENT;
+            // A pet says its own rarity at the end - "Obsidian Golem Pet (Uncommon)" - and
+            // that beats the tier list, which names a family rather than one drop. The list
+            // has "Golem (pet)" as epic, so an uncommon one rang the epic call.
+            String note = a.group(3);
+            if (note != null && RARITY_NOTE.matcher(note).find()) {
+                return once(new Drop(item, rank(note), amount.quantity()), source, now);
+            }
+            // A boss or slayer pet has no bracket - "[Lvl 1] Ender Dragon" - and its rarity is
+            // only the colour of the name: gold legendary, purple epic. The tier list names the
+            // pet, not the rarity, so every Ender Dragon pet read as legendary; Delox got two
+            // epic ones and the mod called both legendary.
+            int pet = petTier(raw);
+            if (pet >= 0) return once(new Drop(item, pet, amount.quantity()), source, now);
+            return once(new Drop(item, tierOf(item, rank(a.group(1))), amount.quantity()), source, now);
+        }
+        // The new server puts the outcome on the roll itself. Strip only the side
+        // fragment count; keep styled pet names so their actual rarity survives.
+        String debug = modernLoot(raw);
+        Matcher l = LOOT.matcher(debug == null ? raw : "loot number: → " + debug);
+        if (l.find()) {
+            ItemAmount amount = itemAmount(Zealots.strip(l.group(2)).trim());
+            if (amount == null) return null;
+            String item = amount.item();
+            // The loot-table colour before [Lvl 1] says nothing about a pet's rarity,
+            // but some server lines also colour the name after the level. Use that
+            // colour when present: a personal debug line can be the only evidence if
+            // the player has not collected the pet and no obtained line arrives.
+            // Without a coloured name, wait for the announcement rather than guess
+            // from the family's tier in drops.txt.
+            if (PET_LEVEL.matcher(item).find()) {
+                int pet = petTier(raw);
+                return pet < 0 ? null : once(new Drop(item, pet, amount.quantity()), DropDeduplicator.Source.DEBUG, now);
+            }
+            int tier = tierOf(item, -1);
+            return tier < 0 ? null : once(new Drop(item, tier, amount.quantity()), DropDeduplicator.Source.DEBUG, now);
+        }
+        return null;
+    }
+
+    static String modernLoot(String raw) {
+        if (!MODERN_LOOT.matcher(Zealots.strip(raw).trim()).matches()) return null;
+        String result = SIDE_FRAGS.matcher(raw.substring(raw.indexOf('→') + 1)).replaceFirst("").trim();
+        return Zealots.strip(result).trim().equalsIgnoreCase("nothing") ? null : result;
+    }
+
+    private static Drop once(Drop d, DropDeduplicator.Source source, long now) {
+        int credit = deduplicator.credit(d, source, now);
+        return credit == 0 ? null : credit == d.quantity() ? d : new Drop(d.item(), d.tier(), credit);
+    }
+
+    /** This is a received bonus, not evidence that a boss or zealot supplied it. */
+    public static Drop bonus(String raw) {
+        Matcher m = BONUS.matcher(Zealots.strip(raw).trim());
+        if (!m.matches()) return null;
+        int quantity = quantity(m.group(1));
+        return quantity == 0 ? null : new Drop(m.group(2).trim(), 0, quantity);
+    }
+
+    private record ItemAmount(String item, int quantity) { }
+
+    private static ItemAmount itemAmount(String text) {
+        Matcher suffix = SUFFIX_AMOUNT.matcher(text), prefix = PREFIX_AMOUNT.matcher(text);
+        if (suffix.matches()) {
+            int count = quantity(suffix.group(2));
+            return count == 0 ? null : new ItemAmount(suffix.group(1).trim(), count);
+        }
+        if (prefix.matches()) {
+            int count = quantity(prefix.group(1));
+            return count == 0 ? null : new ItemAmount(prefix.group(2).trim(), count);
+        }
+        return new ItemAmount(text, 1);
+    }
+
+    private static int quantity(String text) {
+        try { return Math.max(0, Integer.parseInt(text.replace(",", ""))); }
+        catch (NumberFormatException e) { return 0; }
+    }
+
+    /** Minecraft's own rarity colours, so the call reads like the item's name would. */
+    public static int colour(int tier) {
+        return switch (tier) {
+            case 3 -> 0xFFAA00;   // gold, legendary
+            case 2 -> 0xAA00AA;   // dark purple, epic
+            case 1 -> 0x5555FF;   // blue, rare
+            default -> 0xAAAAAA;  // grey, common
+        };
+    }
+
+    public static boolean passes(Drop d, String minTier) {
+        return d.tier() >= TIERS.indexOf(minTier);
+    }
+
+    // ── the list ──────────────────────────────────────────────────────────────
+
+    /** The tier from your list, or common. */
+    public static int tierOf(String item) {
+        return Math.max(0, tierOf(item, 0));
+    }
+
+    /** Whether the tier list names this item at all, as opposed to falling back to the game's colour. */
+    public static boolean listed(String item) {
+        return listedTierOf(item) >= 0;
+    }
+
+    /** Configured category, or -1 when the item is absent from the editable list. */
+    public static int listedTierOf(String item) {
+        return tierOf(item, -1);
+    }
+
+    private static int tierOf(String item, int fallback) {
+        Rule rule = ruleOf(item);
+        return rule == null ? fallback : rule.tier();
+    }
+
+    /** Position in drops.txt, for sorting items inside one tier; unlisted items come last. */
+    public static int orderOf(String item) {
+        Rule rule = ruleOf(item);
+        return rule == null ? Integer.MAX_VALUE : rule.order();
+    }
+
+    private static Rule ruleOf(String item) {
+        if (rules == null) rules = load();
+        String hay = item.toLowerCase(Locale.ROOT);
+        for (Rule r : rules) if (hay.contains(r.needle())) return r;
+        return null;
+    }
+
+    /**
+     * The items in one tier, as a readable list, for the settings pages: a choice of
+     * "Epic and up" means nothing until you can see what epic holds.
+     */
+    public static String listing(int tier) {
+        if (rules == null) rules = load();
+        List<String> names = new ArrayList<>();
+        rules.stream().filter(r -> r.tier() == tier)
+                .sorted(java.util.Comparator.comparingInt(Rule::order))
+                .forEach(r -> names.add(r.name()));
+        return names.isEmpty() ? "Nothing listed." : String.join(", ", names) + ".";
+    }
+
+    /** Four notes, one per tier, for any page that offers the tier choice. */
+    public static List<com.dragsimutils.ui.Setting> tierNotes() {
+        return List.of(
+                new com.dragsimutils.ui.Setting.Note("Legendary", () -> listing(3)),
+                new com.dragsimutils.ui.Setting.Note("Epic", () -> listing(2)),
+                new com.dragsimutils.ui.Setting.Note("Rare", () -> listing(1)),
+                new com.dragsimutils.ui.Setting.Note("Common", () -> listing(0)));
+    }
+
+    /** Re-read the file. For after an edit, without a restart. */
+    public static void reload() {
+        rules = null;
+    }
+
+    public static Path file() {
+        return FabricLoader.getInstance().getConfigDir().resolve("dragsimutils").resolve("drops.txt");
+    }
+
+    /**
+     * The bundled list first, then yours on top of it - so an item added to the shipped
+     * list reaches everyone who copied an older one, and anything you re-tiered stays
+     * the way you put it. The same name in both: yours wins.
+     */
+    private static List<Rule> load() {
+        Map<String, Rule> rules = new LinkedHashMap<>();
+        try (InputStream in = Drops.class.getResourceAsStream("/dragsimutils-drops.txt")) {
+            if (in != null) read(new String(in.readAllBytes(), StandardCharsets.UTF_8).lines().toList(), rules, false);
+        } catch (IOException e) {
+            System.err.println("[Dragsim Utils] could not read the bundled drops.txt: " + e);
+        }
+        try {
+            Path f = file();
+            if (!Files.exists(f)) {
+                Files.createDirectories(f.getParent());
+                try (InputStream in = Drops.class.getResourceAsStream("/dragsimutils-drops.txt")) {
+                    if (in != null) Files.copy(in, f);
+                }
+            }
+            read(Files.readAllLines(f, StandardCharsets.UTF_8), rules, true);
+        } catch (IOException e) {
+            System.err.println("[Dragsim Utils] could not read drops.txt: " + e);
+        }
+        List<Rule> out = new ArrayList<>(rules.values());
+        out.sort((x, y) -> y.needle().length() - x.needle().length());
+        return out;
+    }
+
+    private static void read(List<String> lines, Map<String, Rule> into) {
+        read(lines, into, true);
+    }
+
+    private static void read(List<String> lines, Map<String, Rule> into, boolean userFile) {
+        for (int lineNumber = 0; lineNumber < lines.size(); lineNumber++) {
+            String line = lines.get(lineNumber);
+            String t = line.trim();
+            if (t.isEmpty() || t.startsWith("#")) continue;
+            String[] parts = t.split("\\s+", 2);
+            if (parts.length < 2) continue;
+            int tier = switch (parts[0].toLowerCase(Locale.ROOT)) {
+                case "legendary" -> 3;
+                case "epic" -> 2;
+                case "rare" -> 1;
+                case "common" -> 0;
+                default -> -1;
+            };
+            if (tier < 0) continue;
+            // "Warden (pet)": the note in brackets is for the reader, not the match -
+            // the drop line says "[Lvl 1] Warden", and a bare "Warden" in a list of
+            // legendaries reads like the boss.
+            String name = parts[1].trim();
+            String needle = name.replaceFirst("\\s*\\([^)]*\\)\\s*$", "").toLowerCase(Locale.ROOT);
+            // The user's file wins both the tier and the position. A new shipped
+            // entry absent from an older config follows the user's listed items.
+            int order = (userFile ? 0 : 1_000_000) + lineNumber;
+            into.put(needle, new Rule(name, needle, tier, order));
+        }
+    }
+
+    // ── fallbacks ─────────────────────────────────────────────────────────────
+
+    private static final Pattern PET_NAME = Pattern.compile("\\[Lvl \\d+\\]\\s*§([0-9a-fA-F])");
+
+    /**
+     * A pet's rarity from the colour of its name in the raw line, or -1 for anything
+     * that is not a pet. "RARE DROP! [Lvl 1] Scatha" is a legendary Scatha if the name
+     * is gold; the word in front of it is the drop's, not the pet's.
+     */
+    public static int petTier(String raw) {
+        Matcher m = PET_NAME.matcher(raw);
+        if (!m.find()) return -1;
+        return switch (Character.toLowerCase(m.group(1).charAt(0))) {
+            case '6', 'd', 'b', 'c' -> 3;     // legendary, and mythic and above count with it
+            case '5' -> 2;                    // epic
+            case '9' -> 1;                    // rare
+            default -> 0;                     // uncommon, common
+        };
+    }
+
+    private static int rank(String tier) {
+        String t = tier.trim().toUpperCase(Locale.ROOT);
+        if (t.contains("LEGENDARY") || t.contains("CRAZY") || t.contains("RNGESUS")) return 3;
+        if (t.contains("EPIC")) return 2;
+        if (t.contains("RARE")) return 1;
+        if (t.contains("FLOOR") || t.contains("COMMON")) return 0;
+        return 1;
+    }
+
+    /** White, grey and green sit below rare; blue is rare, purple epic, gold and beyond legendary. */
+    private static int rankColour(String code) {
+        if (code == null) return 1;
+        return switch (code.charAt(1)) {
+            case '9' -> 1;
+            case '5' -> 2;
+            case '6', 'd', 'b', 'c', '4' -> 3;
+            default -> 0;
+        };
+    }
+}
