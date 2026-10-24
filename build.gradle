@@ -440,27 +440,3 @@ tasks.register('networkSafetyChecks', JavaExec) {
     mainClass = 'com.dragsimutils.profile.NetworkSafetyChecks'
 }
 tasks.named('check') { dependsOn 'networkSafetyChecks' }
-// Native screenshots and interaction checks live in a separate test mod.
-if (providers.gradleProperty('profileVisualTest').isPresent() || providers.gradleProperty('cacheVisualTest').isPresent()
-        || providers.gradleProperty('mapVisualTest').isPresent() || providers.gradleProperty('keyVisualTest').isPresent()) {
-    fabricApi.configureTests {
-        createSourceSet = true
-        modId = 'dragsimutils-profile-tests'
-        enableGameTests = false
-        enableClientGameTests = true
-        clearRunDirectory = false
-    }
-    sourceSets.gametest.compileClasspath += sourceSets.client.output + sourceSets.client.compileClasspath
-    sourceSets.gametest.runtimeClasspath += sourceSets.client.runtimeClasspath
-    // One suite per run: each opens its own world and screenshots, and the others are slow.
-    def only = providers.gradleProperty('cacheVisualTest').isPresent() ? '"com.dragsimutils.storage.CacheVisualTest"'
-            : providers.gradleProperty('mapVisualTest').isPresent() ? '"com.dragsimutils.dungeon.DungeonMapVisualTest"'
-            : providers.gradleProperty('keyVisualTest').isPresent() ? '"com.dragsimutils.dungeon.KeyAlertVisualTest"'
-            : '"com.dragsimutils.profile.ProfileVisualTest"'
-    tasks.named('processGametestResources') {
-        inputs.property('only', only)
-        filesMatching('fabric.mod.json') {
-            filter { line -> line.replace('"com.dragsimutils.profile.ProfileVisualTest", "com.dragsimutils.storage.CacheVisualTest", "com.dragsimutils.dungeon.DungeonMapVisualTest", "com.dragsimutils.dungeon.KeyAlertVisualTest"', only) }
-        }
-    }
-}
