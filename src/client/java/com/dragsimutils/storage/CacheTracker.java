@@ -1,5 +1,6 @@
 package com.dragsimutils.storage;
 
+import com.dragsimutils.util.LegacyColors;
 import com.dragsimutils.hud.HudCard;
 import com.dragsimutils.hud.HudLayout;
 import com.dragsimutils.hud.TrackerDropOrder;
@@ -88,7 +89,7 @@ public final class CacheTracker {
         net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((mc, screen, w, h) -> {
             if (!HudLayout.interactiveScreen(screen)) return;
             net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents.allowMouseClick(screen).register((s, click) -> {
-                if (click.button() != 0 || !enabled || mc.options.hideGui) return true;
+                if (click.button() != 0 || !enabled || mc.gui.hud.isHidden()) return true;
                 int[] bounds = HudLayout.bounds(ID);
                 if (bounds == null) return true;
                 float scale = HudLayout.scale(ID);
@@ -104,7 +105,7 @@ public final class CacheTracker {
         HudLayout.register(ID, "Cache Tracker", .006f, .78f, CacheTracker::drawAt);
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("dragsimutils", "cache_tracker"), (g, delta) -> {
             Minecraft mc = Minecraft.getInstance();
-            if (enabled && mc.player != null && !mc.options.hideGui
+            if (enabled && mc.player != null && !mc.gui.hud.isHidden()
                     && visibility.visible(System.currentTimeMillis()))
                 HudLayout.draw(ID, g, mc.font, false);
         });
@@ -224,7 +225,7 @@ public final class CacheTracker {
     }
     private static char code(int colour) {
         for (var value : net.minecraft.ChatFormatting.values())
-            if (value.isColor() && value.getColor() != null && value.getColor() == (colour & 0xFFFFFF)) return value.getChar();
+            if (LegacyColors.isColor(value) && LegacyColors.color(value) != null && LegacyColors.color(value) == (colour & 0xFFFFFF)) return LegacyColors.code(value);
         return 'f';
     }
     private static int[] drawAt(GuiGraphicsExtractor g, Font font, int x, int y, boolean sample) {

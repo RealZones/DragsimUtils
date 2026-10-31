@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0
+
+Ported to Minecraft 26.2 on Fabric Loader 0.19.5 and Fabric API 0.161.0.
+
+- Follows the 26.2 move of screens and HUD state into Gui and Hud.
+- Hotbar rarity outlines and action bar reading hook into Hud.
+- Chat colour lookups use TextColor, team sidebars use the new TeamColor.
+- Concrete and entity type lookups use the new block colour collections and EntityTypes.
+
 ## 1.0.0
 
 Initial Dragsim Utils release for Minecraft 26.1.2 on Fabric.

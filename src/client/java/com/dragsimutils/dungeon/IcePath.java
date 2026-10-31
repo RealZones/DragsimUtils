@@ -1,5 +1,6 @@
 package com.dragsimutils.dungeon;
 
+import net.minecraft.world.entity.EntityTypes;
 import com.dragsimutils.dragons.DragonTimer;
 import com.dragsimutils.ui.Module;
 import com.dragsimutils.ui.Setting;
@@ -203,7 +204,7 @@ public final class IcePath {
         Entity best = null;
         double nearest = 40 * 40;
         for (Entity entity : mc.level.entitiesForRendering()) {
-            if (entity.getType() != EntityType.SILVERFISH) continue;
+            if (entity.getType() != EntityTypes.SILVERFISH) continue;
             double distance = entity.distanceToSqr(mc.player);
             if (distance < nearest) { nearest = distance; best = entity; }
         }

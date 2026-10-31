@@ -263,7 +263,7 @@ public final class DragonTimer {
     private static void draw(GuiGraphicsExtractor g) {
         if (!enabled || !showHud) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
         if (!Area.end()) return;
 
         HudLayout.draw("dragon.timer", g, mc.font, false);

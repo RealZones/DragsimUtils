@@ -35,12 +35,12 @@ public final class DropPricesScreen extends Screen {
 
     public static void open() {
         Minecraft mc = Minecraft.getInstance();
-        mc.setScreen(new DropPricesScreen(mc.screen, "Slayer drop prices", BossDrops::knownSlayerDropNames));
+        mc.gui.setScreen(new DropPricesScreen(mc.gui.screen(), "Slayer drop prices", BossDrops::knownSlayerDropNames));
     }
 
     public static void openZealot() {
         Minecraft mc = Minecraft.getInstance();
-        mc.setScreen(new DropPricesScreen(mc.screen, "Zealot drop prices", () -> NpcPrices.ZEALOT_PROFIT_ITEMS));
+        mc.gui.setScreen(new DropPricesScreen(mc.gui.screen(), "Zealot drop prices", () -> NpcPrices.ZEALOT_PROFIT_ITEMS));
     }
 
     private int x() { return Math.max(8, (width - w()) / 2); }
@@ -156,7 +156,7 @@ public final class DropPricesScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         int mx = (int) event.x(), my = (int) event.y(), px = x(), py = y(), lw = listW();
-        if (in(px + w() - 48, py + 9, 43, 24, mx, my)) { minecraft.setScreen(parent); return true; }
+        if (in(px + w() - 48, py + 9, 43, 24, mx, my)) { minecraft.gui.setScreen(parent); return true; }
         if (in(px + w() - 80, footerY() + 6, 65, 18, mx, my)) {
             boolean reloaded = NpcPrices.reloadCustom();
             showSelected();
@@ -199,7 +199,7 @@ public final class DropPricesScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if ((event.key() == 257 || event.key() == 335) && amount.isFocused()) { save(); return true; }
-        if (event.key() == 256) { minecraft.setScreen(parent); return true; }
+        if (event.key() == 256) { minecraft.gui.setScreen(parent); return true; }
         return super.keyPressed(event);
     }
 

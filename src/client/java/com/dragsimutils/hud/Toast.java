@@ -136,7 +136,7 @@ public final class Toast {
     public static void draw(GuiGraphicsExtractor g) {
         if (live.isEmpty()) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.gui.hud.isHidden()) return;
 
         live.removeIf(Entry::done);
         while (slot.size() > live.size()) slot.remove(slot.size() - 1);

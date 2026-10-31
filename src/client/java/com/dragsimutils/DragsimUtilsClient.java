@@ -290,7 +290,7 @@ public class DragsimUtilsClient implements ClientModInitializer {
         String open = SettingsScreen.openModule();
         Module page = open == null ? null
                 : registry().all().stream().filter(m -> m.id().equals(open)).findFirst().orElse(null);
-        client.setScreen(page == null ? browser : new SettingsScreen(browser, "Dragsim Utils", page));
+        client.gui.setScreen(page == null ? browser : new SettingsScreen(browser, "Dragsim Utils", page));
     }
 
     private void onTick(Minecraft client) {
@@ -302,12 +302,12 @@ public class DragsimUtilsClient implements ClientModInitializer {
         boolean down = !OPEN.isUnbound() && (key.getType() == InputConstants.Type.MOUSE
                 ? GLFW.glfwGetMouseButton(client.getWindow().handle(), key.getValue()) == GLFW.GLFW_PRESS
                 : InputConstants.isKeyDown(client.getWindow(), key.getValue()));
-        if (down && !keyWasDown && (client.screen == null && client.level != null)) open(client);
+        if (down && !keyWasDown && (client.gui.screen() == null && client.level != null)) open(client);
         keyWasDown = down;
 
         // Bound keys are polled here too, and only with no screen open - otherwise the
         // press that binds a key would also fire whatever it was just bound to.
-        if (client.screen == null && client.level != null) fireBinds(client);
+        if (client.gui.screen() == null && client.level != null) fireBinds(client);
     }
 
     /**

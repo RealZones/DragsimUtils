@@ -294,9 +294,9 @@ public final class PowderTracker {
         long cut = nowMs - PACE_MS;
         while (!recent.isEmpty() && recent.peekFirst()[0] < cut) recent.pollFirst();
         while (!recentXp.isEmpty() && recentXp.peekFirst()[0] < cut) recentXp.pollFirst();
-        if (mc.screen instanceof AbstractContainerScreen<?> s) {
+        if (mc.gui.screen() instanceof AbstractContainerScreen<?> s) {
             if (tickN % SCREEN_EVERY == 0 && clean(s.getTitle().getString()).equalsIgnoreCase(HOTD)) scanHotd(s);
-        } else if (mc.screen == null && remind) {
+        } else if (mc.gui.screen() == null && remind) {
             remindReady();
         }
         VoidFragments.tick(mc);
@@ -518,7 +518,7 @@ public final class PowderTracker {
 
     private static void draw(GuiGraphicsExtractor g) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.gui.hud.isHidden()) return;
         // The fuel line and the fragment line have their own switches and live in this
         // class only because it is the one reading the drill and the blocks. Turning the
         // powder readout off took both down with it, which is not what the toggle says.

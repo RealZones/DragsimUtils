@@ -37,7 +37,7 @@ public final class ChatHudDrag {
             if (!(screen instanceof ChatScreen) || !HudLayout.interactiveScreen(screen)) return;
             reset();
             ScreenMouseEvents.allowMouseClick(screen).register((s, click) -> {
-                pressed = click.button() == 0 && !mc.options.hideGui ? at(click.x(), click.y()) : null;
+                pressed = click.button() == 0 && !mc.gui.hud.isHidden() ? at(click.x(), click.y()) : null;
                 if (pressed != null) {
                     int[] b = HudLayout.bounds(pressed);
                     pressX = click.x(); pressY = click.y();
@@ -66,7 +66,7 @@ public final class ChatHudDrag {
                 return !moved;
             });
             ScreenEvents.afterExtract(screen).register((s, g, mx, my, delta) -> {
-                if (mc.options.hideGui) return;
+                if (mc.gui.hud.isHidden()) return;
                 String hot = dragging != null ? dragging : at(mx, my);
                 int[] b = hot == null ? null : HudLayout.bounds(hot);
                 if (b == null) return;

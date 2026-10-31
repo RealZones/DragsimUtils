@@ -1,5 +1,6 @@
 package com.dragsimutils.dragons;
 
+import com.dragsimutils.util.LegacyColors;
 import com.dragsimutils.hud.Area;
 import com.dragsimutils.hud.HudLayout;
 import com.dragsimutils.hud.HudCard;
@@ -632,7 +633,7 @@ public final class BossDrops {
             for (ItemStack s : mc.player.getInventory().getNonEquipmentItems()) {
                 if (!s.isEmpty() && s.getHoverName().getString().contains(CATALYST)) n += s.getCount();
             }
-            if (catalysts >= 0 && n == catalysts - 1 && mc.screen == null) catalystAt = now;
+            if (catalysts >= 0 && n == catalysts - 1 && mc.gui.screen() == null) catalystAt = now;
             catalysts = n;
         });
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> {
@@ -642,7 +643,7 @@ public final class BossDrops {
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
             if (!HudLayout.interactiveScreen(screen)) return;
             ScreenMouseEvents.allowMouseClick(screen).register((s, event) -> {
-                if (event.button() != 0 || client.options.hideGui) return true;
+                if (event.button() != 0 || client.gui.hud.isHidden()) return true;
                 if (bossHudVisible()) {
                     int[] bounds = HudLayout.bounds("dragon.bossdrops");
                     if (periodHit(bounds, HudLayout.scale("dragon.bossdrops"), event.x(), event.y(), client.font.width(periodText(hudPeriod)))) {
@@ -719,7 +720,7 @@ public final class BossDrops {
     }
 
     private static void learnSpawnCosts(Minecraft mc) {
-        if (!trackingEnabled() || !(mc.screen instanceof AbstractContainerScreen<?> screen)) return;
+        if (!trackingEnabled() || !(mc.gui.screen() instanceof AbstractContainerScreen<?> screen)) return;
         String title = Zealots.strip(screen.getTitle().getString()).trim();
         if (!title.equals("Revenant Horror") && !title.equals("Voidgloom Seraph") && !title.equals("Riftborn Seraph")) return;
         for (var slot : screen.getMenu().slots) {
@@ -1228,7 +1229,7 @@ public final class BossDrops {
 
     private static void drawHud(GuiGraphicsExtractor g) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
         if (bossHudVisible()) HudLayout.draw("dragon.bossdrops", g, mc.font, false);
         if (profitHudVisible(slayerHud)) HudLayout.draw(slayerHud.id, g, mc.font, false);
     }
@@ -1303,7 +1304,7 @@ public final class BossDrops {
     private static String itemColour(String item) {
         int rgb = Rarity.colour(item, Drops.colour(tier(item))) & 0xFFFFFF;
         for (var colour : net.minecraft.ChatFormatting.values())
-            if (colour.isColor() && colour.getColor() != null && colour.getColor() == rgb) return "§" + colour.getChar();
+            if (LegacyColors.isColor(colour) && LegacyColors.color(colour) != null && LegacyColors.color(colour) == rgb) return "§" + LegacyColors.code(colour);
         return "§f";
     }
 
@@ -1363,7 +1364,7 @@ public final class BossDrops {
     private static int[] drawHudAt(GuiGraphicsExtractor g, Font font, int x, int y, boolean sample) {
         String boss = sample ? GOLEM : hudBoss();
         String title = boss + " Drops";
-        if (isDragon(boss) && HudLayout.interactiveScreen(Minecraft.getInstance().screen)) title = "§n" + title;
+        if (isDragon(boss) && HudLayout.interactiveScreen(Minecraft.getInstance().gui.screen())) title = "§n" + title;
         return drawCountsHudAt(g, font, x, y, sample, boss, hudPeriod, compactHud, title);
     }
 

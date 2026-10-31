@@ -372,7 +372,7 @@ public final class VoidgloomHelper {
 
     /** Where a tracer starts: a little ahead of and below the eye, so it reads as rising from the bottom of the screen. */
     private static Vec3 tracerFrom(Minecraft mc) {
-        var cam = mc.gameRenderer.getMainCamera();
+        var cam = mc.gameRenderer.mainCamera();
         var f = cam.forwardVector();
         return cam.position().add(f.x() * 0.8, f.y() * 0.8 - 0.45, f.z() * 0.8);
     }
@@ -411,7 +411,7 @@ public final class VoidgloomHelper {
     private static void gizmos() {
         if (!enabled) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
 
         if (highlight && bossEntity != null && !bossEntity.isRemoved()
                 && System.currentTimeMillis() - bossSeen < 2000) {
@@ -438,7 +438,7 @@ public final class VoidgloomHelper {
     }
 
     private static boolean showBeams(Minecraft mc) {
-        return enabled && beams && !mc.options.hideGui && mc.level != null && mc.player != null
+        return enabled && beams && !mc.gui.hud.isHidden() && mc.level != null && mc.player != null
                 && Slayer.bossUp() && bossRadiating && bossSupportsRadiation
                 && bossEntity != null && !bossEntity.isRemoved() && bossEntity.level() == mc.level
                 && System.currentTimeMillis() - bossSeen < 250;
@@ -496,7 +496,7 @@ public final class VoidgloomHelper {
     private static void draw(GuiGraphicsExtractor g) {
         if (!enabled || (!onScreen && !radiationTimer)) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
         // Only while a boss has been seen in the last couple of seconds.
         if (bossSeen == 0 || System.currentTimeMillis() - bossSeen >= 2000) return;
 

@@ -74,7 +74,7 @@ public final class CopyChat {
 
     /** Copies the message under the mouse; false if there was none there. */
     private static boolean copyAt(Minecraft mc, double x, double y) {
-        ChatComponent chat = mc.gui.getChat();
+        ChatComponent chat = mc.gui.hud.getChat();
         double scale = mc.options.chatScale().get();
         int lineHeight = (int) (9.0 * (mc.options.chatLineSpacing().get() + 1.0));
         double fromBottom = mc.getWindow().getGuiScaledHeight() - 40.0 - y;

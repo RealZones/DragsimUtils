@@ -88,7 +88,7 @@ public final class AbilitySpam {
     private static void stack(Component message, String kind) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.gui == null) return;
-        ChatComponent chat = mc.gui.getChat();
+        ChatComponent chat = mc.gui.hud.getChat();
         List<GuiMessage> all = chat.allMessages;
         // A Terminator miss must not turn the cooldown line's count into its own.
         if (stacked != null && kind.equals(stackedKind)

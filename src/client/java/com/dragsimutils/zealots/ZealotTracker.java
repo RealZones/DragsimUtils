@@ -300,7 +300,7 @@ public final class ZealotTracker {
         ScreenEvents.AFTER_INIT.register((mc, screen, width, height) -> {
             if (!(screen instanceof AbstractContainerScreen<?>)) return;
             ScreenEvents.afterExtract(screen).register((current, g, mx, my, delta) -> {
-                if (mc.screen == current) drawProfitTooltip(g, mx, my);
+                if (mc.gui.screen() == current) drawProfitTooltip(g, mx, my);
             });
         });
 
@@ -571,7 +571,7 @@ public final class ZealotTracker {
     private static void draw(GuiGraphicsExtractor g) {
         if (!enabled) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
         if (!Area.end()) return;
         // Eman slayers are often run in the same End area. Location and recent zealot
         // activity alone cannot tell which tracker the player currently needs.
@@ -680,7 +680,7 @@ public final class ZealotTracker {
 
     private static void drawProfitTooltip(GuiGraphicsExtractor g, int mx, int my) {
         Minecraft mc = Minecraft.getInstance();
-        if (!enabled || mc.player == null || mc.level == null || mc.options.hideGui || !Area.end()) return;
+        if (!enabled || mc.player == null || mc.level == null || mc.gui.hud.isHidden() || !Area.end()) return;
         if (lastActivity == 0 || System.currentTimeMillis() - lastActivity > HIDE_IDLE_MS
                 || com.dragsimutils.storage.MiningSession.lastActive() > lastActivity) return;
         if (!profitHovered(HudLayout.bounds("zealot.tracker"), HudLayout.scale("zealot.tracker"), mx, my)) return;

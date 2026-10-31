@@ -53,7 +53,7 @@ public final class ProfileScreen extends Screen {
 
     @Override protected void init() { if (data==null && generation==0) load(false); }
     @Override public boolean isPauseScreen() { return false; }
-    @Override public void onClose() { generation++; Minecraft.getInstance().setScreen(parent); }
+    @Override public void onClose() { generation++; Minecraft.getInstance().gui.setScreen(parent); }
     @Override public void extractBackground(GuiGraphicsExtractor g,int mx,int my,float delta) { }
 
     private void load(boolean force) {

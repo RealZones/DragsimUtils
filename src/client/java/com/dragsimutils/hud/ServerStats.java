@@ -122,7 +122,7 @@ public final class ServerStats {
 
     private static void draw(GuiGraphicsExtractor g) {
         Minecraft mc = Minecraft.getInstance();
-        if (!enabled || mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (!enabled || mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
         HudLayout.draw("hud.stats", g, mc.font, false);
     }
 

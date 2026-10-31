@@ -49,7 +49,7 @@ public final class HudPlacementScreen extends Screen {
      */
     public static void open() {
         Minecraft mc = Minecraft.getInstance();
-        mc.setScreen(new HudPlacementScreen(mc.screen));
+        mc.gui.setScreen(new HudPlacementScreen(mc.gui.screen()));
     }
 
     @Override
@@ -193,7 +193,7 @@ public final class HudPlacementScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) {                 // escape goes back, not out
-            minecraft.setScreen(parent);
+            minecraft.gui.setScreen(parent);
             return true;
         }
         return super.keyPressed(event);

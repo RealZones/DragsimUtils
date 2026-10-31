@@ -443,7 +443,7 @@ public final class Quiz {
         if (tracer) {
             // Same shape as the Revenant tile tracer: start a little ahead of and below
             // the camera so the line reads as coming from the player, not the eye.
-            var camera = mc.gameRenderer.getMainCamera();
+            var camera = mc.gameRenderer.mainCamera();
             Vec3 eye = camera.position();
             var forward = camera.forwardVector();
             Vec3 from = eye.add(forward.x() * .8, forward.y() * .8 - .45, forward.z() * .8);

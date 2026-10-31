@@ -230,7 +230,7 @@ public final class Recipes {
         });
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             // A scan that loses its screen - Escape, a teleport - is over, not waiting.
-            if (armed && mc.screen == null && System.currentTimeMillis() - busyUntil > 1_500) finish("stopped");
+            if (armed && mc.gui.screen() == null && System.currentTimeMillis() - busyUntil > 1_500) finish("stopped");
             // Icons need the level's registries to decode, so they wait for one.
             if (mc.level == null) return;
             if (!iconsLoaded) {
@@ -950,14 +950,14 @@ public final class Recipes {
     /** A full recipe viewer is distinct from the small item grid on the right. */
     public static boolean overlayOpen() {
         Minecraft mc = Minecraft.getInstance();
-        return enabled && panel && !RECIPES.isEmpty() && owner == mc.screen
+        return enabled && panel && !RECIPES.isEmpty() && owner == mc.gui.screen()
                 && (openRecipe != null || openUses != null);
     }
 
     /** HUD controls must never draw or receive clicks through a recipe pane. */
     public static boolean overlayOccludes(int x, int y, int w, int h) {
         Minecraft mc = Minecraft.getInstance();
-        if (!(mc.screen instanceof AbstractContainerScreen<?> s) || owner != s
+        if (!(mc.gui.screen() instanceof AbstractContainerScreen<?> s) || owner != s
                 || !enabled || RECIPES.isEmpty() || StorageOverview.active(s)) return false;
         if (panel) {
             if (shown) {

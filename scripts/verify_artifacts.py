@@ -78,7 +78,7 @@ def main():
     require(metadata["entrypoints"] == {"client": ["com.dragsimutils.DragsimUtilsClient"]}, "Unexpected entrypoint")
     require(not metadata.get("jars"), "Unexpected bundled dependency jar")
     require(metadata["breaks"].get("endsight") == "*", "Old mod conflict guard is missing")
-    require(metadata["depends"].get("minecraft") == "~26.1.2" and metadata["depends"].get("java") == ">=25", "Wrong game requirements")
+    require(metadata["depends"].get("minecraft") == "~26.2" and metadata["depends"].get("java") == ">=25", "Wrong game requirements")
     require("fabric-api" in metadata["depends"] and "fabricloader" in metadata["depends"], "Missing Fabric requirements")
     require(metadata["icon"] in entries and metadata["accessWidener"] in entries, "Missing packaged resource")
     head = git("rev-parse", "HEAD")

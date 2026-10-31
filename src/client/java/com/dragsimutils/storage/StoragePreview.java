@@ -123,7 +123,7 @@ public final class StoragePreview {
 
     private static void openPlacement() {
         Minecraft mc = Minecraft.getInstance();
-        mc.setScreen(new PreviewPlacementScreen(mc.screen));
+        mc.gui.setScreen(new PreviewPlacementScreen(mc.gui.screen()));
     }
 
     public static void init() {
