@@ -166,7 +166,7 @@ public class SettingsScreen extends Screen {
     /** Back to the browser, on purpose: the next open starts there. */
     private void back() {
         openModule = null;
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     private final ThemeRow themeRow = new ThemeRow();

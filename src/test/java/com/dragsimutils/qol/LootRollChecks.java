@@ -1,5 +1,7 @@
 package com.dragsimutils.qol;
 
+import com.dragsimutils.util.LegacyColors;
+
 import com.dragsimutils.zealots.Zealots;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
@@ -143,8 +145,8 @@ public final class LootRollChecks {
                 .append(Component.literal("Enderman").withStyle(ChatFormatting.GOLD));
         Component clean = LootRollDetails.displayLine(styled);
         equal(clean.getString(), "▶ 0.03901390% [0.05183680, 0.09085070) [Lvl 1] Enderman");
-        equal(clean.getSiblings().getFirst().getStyle().getColor().getValue(), ChatFormatting.GREEN.getColor());
-        equal(clean.getSiblings().getLast().getStyle().getColor().getValue(), ChatFormatting.GOLD.getColor());
+        equal(clean.getSiblings().getFirst().getStyle().getColor().getValue(), LegacyColors.color(ChatFormatting.GREEN));
+        equal(clean.getSiblings().getLast().getStyle().getColor().getValue(), LegacyColors.color(ChatFormatting.GOLD));
         equal(LootRollDetails.displayLine(Component.literal("▶ 0.08% [0.226, 0.477) Void Fang")).getString(),
                 "▶ 0.08% [0.226, 0.477) Void Fang");
         equal(LootRollDetails.displayLine(Component.literal("base 0.05% → effective unknown [0, 1) Null Ovoid")).getString(),

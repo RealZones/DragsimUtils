@@ -255,7 +255,7 @@ public final class Protector {
     private static void draw(GuiGraphicsExtractor g) {
         if (!enabled || (tier <= 0 && !resting)) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
         if (!Area.end()) return;
 
         HudLayout.draw("dragon.protector", g, mc.font, false);

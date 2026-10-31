@@ -31,7 +31,7 @@ public final class Project {
      * exists to handle. Collapsing straight to pixels throws both away.
      */
     public static Vec3 toView(Vec3 target) {
-        Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
+        Camera cam = Minecraft.getInstance().gameRenderer.mainCamera();
         if (cam == null) return null;
 
         double yaw = Math.toRadians(cam.yRot());
@@ -89,7 +89,7 @@ public final class Project {
      * and put every marker in the corner.
      */
     private static double focal(int screenH) {
-        double fov = Minecraft.getInstance().gameRenderer.getMainCamera().getFov();
+        double fov = Minecraft.getInstance().gameRenderer.mainCamera().getFov();
         double radians = fov < 3.2 ? fov : Math.toRadians(fov);
         if (radians < 0.05) radians = Math.toRadians(70);      // nonsense: fall back
         return (screenH / 2.0) / Math.tan(radians / 2.0);

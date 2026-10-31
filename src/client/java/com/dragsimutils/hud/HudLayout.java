@@ -60,7 +60,7 @@ public final class HudLayout {
             ScreenEvents.afterExtract(screen).register((s, g, mx, my, delta) -> {
                 List<String> requested = List.copyOf(MENU_REQUESTS);
                 MENU_REQUESTS.clear();
-                if (mc.screen != s) return;
+                if (mc.gui.screen() != s) return;
                 List<String> stale = BOUNDS_SCREEN.entrySet().stream()
                         .filter(e -> e.getValue() == s && !requested.contains(e.getKey()))
                         .map(Map.Entry::getKey).toList();
@@ -81,9 +81,9 @@ public final class HudLayout {
         var mc = net.minecraft.client.Minecraft.getInstance();
         // Opening chat must not reuse hit boxes drawn in the world or another menu.
         // The next HUD frame records its actual screen before any control is clickable.
-        if (BOUNDS_SCREEN.get(id) != mc.screen) return null;
+        if (BOUNDS_SCREEN.get(id) != mc.gui.screen()) return null;
         int[] b = BOUNDS.get(id);
-        if (b != null && mc.screen instanceof AbstractContainerScreen<?>
+        if (b != null && mc.gui.screen() instanceof AbstractContainerScreen<?>
                 && Recipes.overlayOccludes(b[0], b[1], b[2], b[3])) return null;
         return b;
     }
@@ -129,7 +129,7 @@ public final class HudLayout {
         Element e = ELEMENTS.get(id);
         if (e == null) return;
         var mc = net.minecraft.client.Minecraft.getInstance();
-        if (!sample && !overMenus && mc.screen instanceof AbstractContainerScreen<?> && !drawingOverMenu) {
+        if (!sample && !overMenus && mc.gui.screen() instanceof AbstractContainerScreen<?> && !drawingOverMenu) {
             // Render after inventory blur, but before recipe panes. Only HUDs
             // whose own module called draw this frame are eligible, preserving their
             // active/paused visibility rules instead of displaying every sample.
@@ -141,7 +141,7 @@ public final class HudLayout {
         int[] size = e.renderer().draw(null, font, 0, 0, sample);
         int w = Math.round(size[0] * s), h = Math.round(size[1] * s);
         int x = x(id, w, sw), y = y(id, h, sh);
-        if (!sample && !overMenus && mc.screen instanceof AbstractContainerScreen<?> container
+        if (!sample && !overMenus && mc.gui.screen() instanceof AbstractContainerScreen<?> container
                 && (StorageOverview.active(container) || Recipes.overlayOccludes(x, y, w, h)
                 || (x < container.leftPos + container.imageWidth && x + w > container.leftPos
                 && y < container.topPos + container.imageHeight && y + h > container.topPos))) {
@@ -151,7 +151,7 @@ public final class HudLayout {
         }
         Readout.mirror = x + w / 2 > sw / 2;
         BOUNDS.put(id, new int[]{x, y, w, h});
-        BOUNDS_SCREEN.put(id, mc.screen);
+        BOUNDS_SCREEN.put(id, mc.gui.screen());
         if (Math.abs(s - 1f) < 0.01f) {
             // As designed: drawn straight at its place, the way every readout always was.
             e.renderer().draw(g, font, x, y, sample);

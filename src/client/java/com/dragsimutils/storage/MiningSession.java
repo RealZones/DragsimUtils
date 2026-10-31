@@ -316,7 +316,7 @@ public final class MiningSession {
         }
         // Not with a window open: what comes out of the PV or a chest in the grace window
         // after a swing is not mined. 21 Fine "mined" in four minutes were 21 Fine pulled.
-        countInventoryGain(mc, counting && mc.screen == null);
+        countInventoryGain(mc, counting && mc.gui.screen() == null);
         if (System.currentTimeMillis() - auditFlushed > 5_000) flushAudit();
         if (lifetimeDirty && now - lifetimeSaved > 5_000) saveLifetime();
         mining = counting;
@@ -349,7 +349,7 @@ public final class MiningSession {
     }
 
     private static boolean miningNow(Minecraft mc) {
-        if (mc.screen != null || mc.hitResult == null || mc.hitResult.getType() != HitResult.Type.BLOCK) return false;
+        if (mc.gui.screen() != null || mc.hitResult == null || mc.hitResult.getType() != HitResult.Type.BLOCK) return false;
         if (!mc.options.keyAttack.isDown()) return false;
         if (!miningTool(mc.player.getMainHandItem())) return false;
         BlockPos pos = ((BlockHitResult) mc.hitResult).getBlockPos();
@@ -539,7 +539,7 @@ public final class MiningSession {
 
     private static boolean readoutVisible() {
         Minecraft mc = Minecraft.getInstance();
-        return enabled && mc.player != null && !mc.options.hideGui && hudVisible()
+        return enabled && mc.player != null && !mc.gui.hud.isHidden() && hudVisible()
                 && (mining || showWhenPaused && activeMs > 0)
                 && com.dragsimutils.zealots.ZealotTracker.lastActivity() <= lastActive;
     }

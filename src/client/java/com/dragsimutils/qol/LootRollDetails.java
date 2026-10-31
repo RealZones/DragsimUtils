@@ -100,7 +100,7 @@ final class LootRollDetails {
             return 0;
         }
         Minecraft mc = Minecraft.getInstance();
-        mc.setScreen(new LootRollDetailsScreen(mc.screen, rows));
+        mc.gui.setScreen(new LootRollDetailsScreen(mc.gui.screen(), rows));
         return 1;
     }
 }

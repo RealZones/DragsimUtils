@@ -7,7 +7,7 @@
 <p align="center">
   Official Dragsim mod for trackers, dungeon guidance and a cleaner HUD.
   <br>
-  <strong>1.0.0</strong> · Minecraft <strong>26.1.2</strong> · Fabric
+  <strong>1.1.0</strong> · Minecraft <strong>26.2</strong> · Fabric
 </p>
 
 <p align="center">
@@ -36,16 +36,16 @@ Networth is **temporarily disabled** in 1.0.0. Player profiles remain available.
 
 | Component | Version |
 | --- | --- |
-| Minecraft Java Edition | **26.1.2** |
-| Fabric Loader | **0.19.1+** |
-| Fabric API | **0.155.0+ for Minecraft 26.1.2** |
+| Minecraft Java Edition | **26.2** |
+| Fabric Loader | **0.19.5+** |
+| Fabric API | **0.161.0+ for Minecraft 26.2** |
 | Java | **25+** |
 
 ## Installation
 
-1. Set up a **Minecraft 26.1.2 Fabric** instance in your launcher.
+1. Set up a **Minecraft 26.2 Fabric** instance in your launcher.
 2. Put the matching **Fabric API** jar in its `mods` folder.
-3. Download [`dragsimutils-1.0.0.jar`](https://github.com/RealZones/DragsimUtils/releases)
+3. Download [`dragsimutils-1.1.0.jar`](https://github.com/RealZones/DragsimUtils/releases)
    and place it in the same folder.
 4. Launch Minecraft and press **Right Shift** to open Dragsim Utils.
 

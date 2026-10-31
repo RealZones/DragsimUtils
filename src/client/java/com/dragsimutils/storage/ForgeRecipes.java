@@ -165,7 +165,7 @@ public final class ForgeRecipes {
         // to build the lines must not build lines again.
         ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> {
             if (!enabled || inTooltip || stack.isEmpty()) return;
-            if (!(Minecraft.getInstance().screen instanceof AbstractContainerScreen<?> screen) || !forgeScreen(screen)) return;
+            if (!(Minecraft.getInstance().gui.screen() instanceof AbstractContainerScreen<?> screen) || !forgeScreen(screen)) return;
             inTooltip = true;
             try {
                 List<String> extra = Recipes.forgeBreakdown(name(stack), 6);
@@ -754,7 +754,7 @@ public final class ForgeRecipes {
 
     private static void draw(GuiGraphicsExtractor g) {
         Minecraft mc = Minecraft.getInstance();
-        if (!enabled || !timer || mc.player == null || mc.options.hideGui || rows(false).isEmpty()) return;
+        if (!enabled || !timer || mc.player == null || mc.gui.hud.isHidden() || rows(false).isEmpty()) return;
         HudLayout.draw(TIMER_ID, g, mc.font, false);
     }
 

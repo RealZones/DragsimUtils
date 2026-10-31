@@ -140,7 +140,7 @@ final class PreviewPlacementScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (event.key() == 256) {                 // escape goes back, not out
-            minecraft.setScreen(parent);
+            minecraft.gui.setScreen(parent);
             return true;
         }
         return super.keyPressed(event);

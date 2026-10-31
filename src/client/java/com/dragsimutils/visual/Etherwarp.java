@@ -76,7 +76,7 @@ public final class Etherwarp {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         Level level = mc.level;
-        if (player == null || level == null || mc.screen != null) return;
+        if (player == null || level == null || mc.gui.screen() != null) return;
         if (!player.isShiftKeyDown()) return;
         int range = range(player.getMainHandItem());
         if (range <= 0) return;

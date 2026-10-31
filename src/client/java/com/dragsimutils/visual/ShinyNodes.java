@@ -1,5 +1,6 @@
 package com.dragsimutils.visual;
 
+import net.minecraft.world.item.DyeColor;
 import com.dragsimutils.hud.Area;
 import com.dragsimutils.ui.Module;
 import com.dragsimutils.ui.Setting;
@@ -97,7 +98,7 @@ public final class ShinyNodes {
     private static boolean validBlock(Minecraft mc, BlockPos pos, boolean burst) {
         if (mc.level == null) return false;
         var state = mc.level.getBlockState(pos);
-        return burst ? state.is(Blocks.SANDSTONE) || state.is(Blocks.BLACK_CONCRETE)
+        return burst ? state.is(Blocks.SANDSTONE) || state.is(Blocks.CONCRETE.pick(DyeColor.BLACK))
                 : state.is(Blocks.END_STONE) || state.is(Blocks.OBSIDIAN);
     }
 

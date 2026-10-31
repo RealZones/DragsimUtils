@@ -1,5 +1,6 @@
 package com.dragsimutils.hud;
 
+import com.dragsimutils.util.LegacyColors;
 import com.dragsimutils.zealots.Zealots;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
@@ -143,8 +144,8 @@ public final class Area {
             net.minecraft.network.chat.TextColor col = style.getColor();
             if (col != null && !text.contains("§")) {
                 for (net.minecraft.ChatFormatting f : net.minecraft.ChatFormatting.values()) {
-                    if (f.isColor() && f.getColor() != null && f.getColor() == col.getValue()) {
-                        sb.append('§').append(f.getChar());
+                    if (LegacyColors.isColor(f) && LegacyColors.color(f) != null && LegacyColors.color(f) == col.getValue()) {
+                        sb.append('§').append(LegacyColors.code(f));
                         break;
                     }
                 }
@@ -169,8 +170,8 @@ public final class Area {
             Objective obj = null;
             if (mc.player != null) {
                 PlayerTeam mine = sb.getPlayersTeam(mc.player.getScoreboardName());
-                if (mine != null && mine.getColor().isColor()) {
-                    obj = sb.getDisplayObjective(DisplaySlot.teamColorToSlot(mine.getColor()));
+                if (mine != null && mine.getColor().isPresent()) {
+                    obj = sb.getDisplayObjective(mine.getColor().get().displaySlot());
                 }
             }
             if (obj == null) obj = sb.getDisplayObjective(DisplaySlot.SIDEBAR);

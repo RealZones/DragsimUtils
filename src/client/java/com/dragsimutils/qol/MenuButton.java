@@ -74,7 +74,7 @@ public final class MenuButton {
         // show the pane's blank tooltip, so the pane's lines are replaced with the
         // button's - vanilla then draws them, and they look like every other item's.
         ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> {
-            if (!(Minecraft.getInstance().screen instanceof AbstractContainerScreen<?> screen)) return;
+            if (!(Minecraft.getInstance().gui.screen() instanceof AbstractContainerScreen<?> screen)) return;
             for (Button b : BUTTONS) {
                 Slot slot = slot(screen, b);
                 if (slot == null || stack != slot.getItem()) continue;

@@ -272,7 +272,7 @@ public final class MiningSpread {
     }
 
     private static Hit hit(Minecraft mc) {
-        if (mc.screen != null || mc.hitResult == null || mc.hitResult.getType() != HitResult.Type.BLOCK) return null;
+        if (mc.gui.screen() != null || mc.hitResult == null || mc.hitResult.getType() != HitResult.Type.BLOCK) return null;
         if (!attackingWithTool(mc)) return null;
         BlockHitResult blockHit = (BlockHitResult) mc.hitResult;
         BlockPos pos = blockHit.getBlockPos();
@@ -292,7 +292,7 @@ public final class MiningSpread {
     }
 
     private static boolean attackingWithTool(Minecraft mc) {
-        return mc.screen == null && mc.options.keyAttack.isDown() && miningTool(mc.player.getMainHandItem());
+        return mc.gui.screen() == null && mc.options.keyAttack.isDown() && miningTool(mc.player.getMainHandItem());
     }
 
     private static String materialName(String name) {
@@ -315,7 +315,7 @@ public final class MiningSpread {
     private static void gizmos() {
         if (!enabled || !overlay) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
         Hit hit = hit(mc);
         BlockPos origin = hit != null ? hit.pos() : sample != null && attackingWithTool(mc) ? sample.origin : null;
         String key = hit != null ? hit.key() : sample != null && attackingWithTool(mc) ? sample.key : null;

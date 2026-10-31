@@ -85,7 +85,7 @@ public final class Beacon {
         }
         if (!enabled) return;
         LocalPlayer player = mc.player;
-        if (player == null || mc.level == null || mc.options.hideGui) return;
+        if (player == null || mc.level == null || mc.gui.hud.isHidden()) return;
         if (!com.dragsimutils.hud.Area.end()) return;
 
         // One beam each; both when both are up, which is exactly when you want them.

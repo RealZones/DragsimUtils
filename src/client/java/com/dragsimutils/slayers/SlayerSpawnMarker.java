@@ -212,7 +212,7 @@ public final class SlayerSpawnMarker {
             ground = null;
             return false;
         }
-        return mc.player != null && !mc.options.hideGui;
+        return mc.player != null && !mc.gui.hud.isHidden();
     }
 
     private static int tint(int rgb, int alpha, double fade) {
@@ -286,7 +286,7 @@ public final class SlayerSpawnMarker {
      * as the glow round its edge, the arrow's version of the ring's soft outer band.
      */
     private static void arrow(Minecraft mc, Vec3 base, double fade, java.util.function.DoubleFunction<Integer> sweep) {
-        Vec3 eye = mc.gameRenderer.getMainCamera().position();
+        Vec3 eye = mc.gameRenderer.mainCamera().position();
         java.util.List<Face> glow = new java.util.ArrayList<>(), solid = new java.util.ArrayList<>();
         double ll = Math.sqrt(LX * LX + LY * LY + LZ * LZ);
         for (int shell = 0; shell < 2; shell++) {
@@ -380,7 +380,7 @@ public final class SlayerSpawnMarker {
      * when the ring is at your feet, where a line would only point straight down.
      */
     private static void tracer(Minecraft mc, Vec3 target, double fade, int neon) {
-        var cam = mc.gameRenderer.getMainCamera();
+        var cam = mc.gameRenderer.mainCamera();
         Vec3 eye = cam.position();
         double dx = target.x - eye.x, dz = target.z - eye.z;
         if (dx * dx + dz * dz < 2.5 * 2.5) return;

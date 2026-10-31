@@ -85,7 +85,7 @@ public final class BloodRoom {
         });
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("dragsimutils", "blood_room"), (g, delta) -> {
             Minecraft mc = Minecraft.getInstance();
-            if (enabled && countdown && openedAt != 0 && !mc.options.hideGui && DungeonContext.active()) {
+            if (enabled && countdown && openedAt != 0 && !mc.gui.hud.isHidden() && DungeonContext.active()) {
                 HudLayout.draw(ID, g, mc.font, false);
             }
         });

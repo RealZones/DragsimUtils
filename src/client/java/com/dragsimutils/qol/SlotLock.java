@@ -76,7 +76,7 @@ public final class SlotLock {
 
     private static void openInventory() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) mc.setScreen(new InventoryScreen(mc.player));
+        if (mc.player != null) mc.gui.setScreen(new InventoryScreen(mc.player));
     }
 
     public static void init() {
@@ -150,7 +150,7 @@ public final class SlotLock {
     }
 
     private static void tick(Minecraft mc) {
-        if (!enabled || !(mc.screen instanceof AbstractContainerScreen<?> screen) || !mc.isWindowActive()) {
+        if (!enabled || !(mc.gui.screen() instanceof AbstractContainerScreen<?> screen) || !mc.isWindowActive()) {
             clearGesture();
             return;
         }

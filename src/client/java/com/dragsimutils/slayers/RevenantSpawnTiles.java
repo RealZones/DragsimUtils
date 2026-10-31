@@ -1,5 +1,6 @@
 package com.dragsimutils.slayers;
 
+import net.minecraft.world.entity.EntityTypes;
 import com.dragsimutils.hud.Area;
 import com.dragsimutils.ui.Module;
 import com.dragsimutils.ui.Setting;
@@ -108,7 +109,7 @@ public final class RevenantSpawnTiles {
         });
         ClientEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             Minecraft mc = Minecraft.getInstance();
-            if (entity.getType() != EntityType.ZOMBIE || mc.player == null
+            if (entity.getType() != EntityTypes.ZOMBIE || mc.player == null
                     || level != armedLevel || !capturing(System.nanoTime())
                     || entity.distanceToSqr(mc.player) > BOSS_RANGE_SQR) return;
             // NAME packets arrive after the zombie's spawn packet. Save its birth tile
@@ -212,7 +213,7 @@ public final class RevenantSpawnTiles {
 
     private static void render() {
         Minecraft mc = Minecraft.getInstance();
-        if (!enabled || mc.player == null || mc.level == null || mc.options.hideGui || !Area.crypts()) return;
+        if (!enabled || mc.player == null || mc.level == null || mc.gui.hud.isHidden() || !Area.crypts()) return;
         long now = System.nanoTime();
         boolean pending = pendingTile != null && capturing(now) && mc.level == activeLevel;
         BlockPos focused = activeBoss != null && mc.level == activeLevel
@@ -332,7 +333,7 @@ public final class RevenantSpawnTiles {
     }
 
     private static void tracer(Minecraft mc, BlockPos p, double fade, double phase, float[] hsb) {
-        var camera = mc.gameRenderer.getMainCamera();
+        var camera = mc.gameRenderer.mainCamera();
         Vec3 eye = camera.position();
         Vec3 target = new Vec3(p.getX() + .5, p.getY() + 1.04, p.getZ() + .5);
         // Crypt boss tiles are often underfoot; the old 2.5-block near cull hid

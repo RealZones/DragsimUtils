@@ -231,7 +231,7 @@ public final class Cooldowns {
             // counted from the last time the part showed, not from the press. A use is
             // now the part appearing. Nothing tracked comes round inside the time the part
             // stays up, and Soulcry, the quickest, has its own chat line besides.
-            Component c = mc.gui.overlayMessageString;
+            Component c = mc.gui.hud.overlayMessageString;
             Matcher m = MANA.matcher(c == null ? "" : Zealots.strip(c.getString()));
             String used = m.find() ? m.group(1).toLowerCase(Locale.ROOT) : "";
             if (!used.isEmpty() && !used.equals(lastUsed))
@@ -387,7 +387,7 @@ public final class Cooldowns {
 
     private static void draw(GuiGraphicsExtractor g) {
         Minecraft mc = Minecraft.getInstance();
-        if (!enabled || mc.player == null || mc.options.hideGui) return;
+        if (!enabled || mc.player == null || mc.gui.hud.isHidden()) return;
         boolean abilitiesVisible = false;
         for (Timer t : ABILITIES) if (visible(mc, t)) abilitiesVisible = true;
         if (abilitiesVisible) HudLayout.draw("cooldown.abilities", g, mc.font, false);

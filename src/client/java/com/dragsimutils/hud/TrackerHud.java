@@ -20,7 +20,7 @@ public final class TrackerHud {
         int h = PAD * 2 + HEADER_H + rows.size() * ROW_H;
         if (g == null) return new int[]{w, h};
         Draw.text(g, font, heading, x + PAD, y + PAD, Theme.text());
-        String shownState = state.startsWith("[") && net.minecraft.client.Minecraft.getInstance().screen != null
+        String shownState = state.startsWith("[") && net.minecraft.client.Minecraft.getInstance().gui.screen() != null
                 ? "§n" + state : state;
         Draw.textRight(g, font, shownState, x + w - PAD, y + PAD, stateColour);
         int ry = y + PAD + HEADER_H;

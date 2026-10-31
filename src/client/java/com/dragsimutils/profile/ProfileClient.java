@@ -46,7 +46,7 @@ public final class ProfileClient {
 
     public static int open(String player) {
         Minecraft mc = Minecraft.getInstance();
-        mc.schedule(() -> mc.setScreen(new ProfileScreen(mc.screen, player)));
+        mc.schedule(() -> mc.gui.setScreen(new ProfileScreen(mc.gui.screen(), player)));
         return 1;
     }
 

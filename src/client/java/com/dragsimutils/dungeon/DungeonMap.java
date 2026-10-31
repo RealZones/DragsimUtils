@@ -93,7 +93,7 @@ public final class DungeonMap {
         });
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("dragsimutils", "dungeon_map"), (g, delta) -> {
             Minecraft mc = Minecraft.getInstance();
-            if (enabled && !boss && mc.player != null && mc.level != null && !mc.options.hideGui && DungeonContext.active())
+            if (enabled && !boss && mc.player != null && mc.level != null && !mc.gui.hud.isHidden() && DungeonContext.active())
                 HudLayout.draw(ID, g, mc.font, false);
         });
     }
@@ -104,7 +104,7 @@ public final class DungeonMap {
             world = mc.level;
         }
         if (!enabled || mc.player == null || mc.level == null || !DungeonContext.active()) return;
-        if (mc.options.hideGui) { readTicks = 0; return; }
+        if (mc.gui.hud.isHidden()) { readTicks = 0; return; }
         var inventory = mc.player.getInventory();
         // Map pixels/decorations stay live in MapItemSavedData. Finding which map to
         // show only needs an inventory pass four times a second, or a hotbar change.

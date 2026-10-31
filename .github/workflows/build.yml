@@ -85,7 +85,7 @@ jobs:
             const marker = `## ${version}`;
             const start = changelog.indexOf(marker);
             const notes = start < 0 ? '' : changelog.slice(start + marker.length).split('\n## ')[0].trim();
-            const body = `${notes}\n\n### Requirements\nMinecraft **26.1.2**, Fabric Loader **0.19.1+**, Fabric API **0.155.0+ for 26.1.2**, Java **25+**.\n\nInstall the regular jar in your Fabric instance's mods folder. Updates are installed manually.\n\nBuilt by GitHub from commit [\`${short}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}).`;
+            const body = `${notes}\n\n### Requirements\nMinecraft **26.2**, Fabric Loader **0.19.5+**, Fabric API **0.161.0+ for 26.2**, Java **25+**.\n\nInstall the regular jar in your Fabric instance's mods folder. Updates are installed manually.\n\nBuilt by GitHub from commit [\`${short}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}).`;
             const releases = await github.paginate(github.rest.repos.listReleases, {...context.repo, per_page: 100});
             let release = releases.find(r => r.tag_name === tag);
             if (release && !release.draft) {

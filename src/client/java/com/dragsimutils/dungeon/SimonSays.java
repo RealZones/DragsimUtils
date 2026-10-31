@@ -1,5 +1,6 @@
 package com.dragsimutils.dungeon;
 
+import net.minecraft.world.phys.Vec3;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
@@ -54,7 +55,7 @@ public final class SimonSays {
         world = mc.level;
         if (grid != null) {
             BlockPos middle = block(grid.support(5));
-            if (mc.player.distanceToSqr(middle.getCenter()) > 18 * 18) { reset(); return; }
+            if (mc.player.distanceToSqr(Vec3.atCenterOf(middle)) > 18 * 18) { reset(); return; }
         }
         SimonSaysBoard.Probe probe = (support, facing) -> cell(mc.level, support, facing);
         SimonSaysBoard.Snapshot snapshot;

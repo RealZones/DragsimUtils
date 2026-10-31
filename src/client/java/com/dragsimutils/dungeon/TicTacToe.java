@@ -1,5 +1,6 @@
 package com.dragsimutils.dungeon;
 
+import net.minecraft.world.item.DyeColor;
 import com.dragsimutils.dragons.DragonTimer;
 import com.dragsimutils.ui.Module;
 import com.dragsimutils.ui.Setting;
@@ -185,8 +186,8 @@ public final class TicTacToe {
         BlockState tile = level.getBlockState(behind), button = level.getBlockState(front);
         // A token replaces the free tile and removes its clicker. Reject the
         // intermediate server packet combination instead of retaining a stale hint.
-        if (tile.is(Blocks.BLUE_CONCRETE)) return button.isAir() ? TicTacToeLogic.BLUE : TicTacToeBoard.UNKNOWN;
-        if (tile.is(Blocks.RED_CONCRETE)) return button.isAir() ? TicTacToeLogic.RED : TicTacToeBoard.UNKNOWN;
+        if (tile.is(Blocks.CONCRETE.pick(DyeColor.BLUE))) return button.isAir() ? TicTacToeLogic.BLUE : TicTacToeBoard.UNKNOWN;
+        if (tile.is(Blocks.CONCRETE.pick(DyeColor.RED))) return button.isAir() ? TicTacToeLogic.RED : TicTacToeBoard.UNKNOWN;
         // A free square is an iron block that still has its button. Both halves are
         // checked: a recording of a real board shows exactly four iron blocks each with
         // a stone button in front and nothing in front of the tokens, so this is the

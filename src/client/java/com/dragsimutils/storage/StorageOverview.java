@@ -259,7 +259,7 @@ public final class StorageOverview {
 
     static void openPage(AbstractContainerScreen<?> source, int page) {
         Minecraft mc = Minecraft.getInstance();
-        if (page <= 0 || page > 54 || mc.screen != source || mc.player == null || mc.level == null
+        if (page <= 0 || page > 54 || mc.gui.screen() != source || mc.player == null || mc.level == null
                 || mc.getConnection() == null || mc.gameMode == null) return;
         pendingPage = new PageRequest(page, mc.level, source, System.currentTimeMillis());
         if (isRoot(source)) tickPageRequest(mc);
@@ -270,10 +270,10 @@ public final class StorageOverview {
         PageRequest request = pendingPage;
         if (request == null) return;
         if (mc.player == null || mc.gameMode == null) { pendingPage = null; return; }
-        AbstractContainerScreen<?> screen = mc.screen instanceof AbstractContainerScreen<?> container ? container : null;
+        AbstractContainerScreen<?> screen = mc.gui.screen() instanceof AbstractContainerScreen<?> container ? container : null;
         boolean root = screen != null && isRoot(screen);
         MenuPage target = root ? livePage(screen, request.page) : null;
-        OpenAction action = request.advance(mc.level, mc.screen, root, target, System.currentTimeMillis());
+        OpenAction action = request.advance(mc.level, mc.gui.screen(), root, target, System.currentTimeMillis());
         if (action == OpenAction.WAIT) return;
         // Consume before sending the click: local prediction can replace the screen.
         pendingPage = null;

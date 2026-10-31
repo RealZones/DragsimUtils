@@ -76,7 +76,7 @@ public final class Alert {
     public static void draw(GuiGraphicsExtractor g) {
         if (text == null) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.gui.hud.isHidden()) return;
 
         long now = System.currentTimeMillis();
         if (now >= until) {

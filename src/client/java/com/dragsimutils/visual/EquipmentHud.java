@@ -1,5 +1,6 @@
 package com.dragsimutils.visual;
 
+import com.dragsimutils.util.LegacyColors;
 import com.dragsimutils.hud.Area;
 import com.dragsimutils.hud.HudLayout;
 import com.dragsimutils.hud.HudPlacementScreen;
@@ -230,7 +231,7 @@ public final class EquipmentHud {
         });
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("dragsimutils", "equipment"), (g, delta) -> {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+            if (mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
             if (armorEnabled) HudLayout.draw(ARMOR_ID, g, mc.font, false);
             if (petEnabled && activePet != null) HudLayout.draw(PET_ID, g, mc.font, false);
         });
@@ -297,7 +298,7 @@ public final class EquipmentHud {
      * The held item is a separate name in its lore; its icon comes from the item catalogue.
      */
     private static void readMenu(Minecraft mc) {
-        if (!(mc.screen instanceof AbstractContainerScreen<?> screen) || mc.player == null) {
+        if (!(mc.gui.screen() instanceof AbstractContainerScreen<?> screen) || mc.player == null) {
             scannedPetMenu = null;
             scannedPetStacks = List.of();
             return;
@@ -560,7 +561,7 @@ public final class EquipmentHud {
             if (ch == '§' && i + 1 < raw.length()) {
                 ChatFormatting format = ChatFormatting.getByCode(raw.charAt(++i));
                 if (format == ChatFormatting.RESET) colour = 0xFFFFFFFF;
-                else if (format != null && format.getColor() != null) colour = 0xFF000000 | format.getColor();
+                else if (format != null && LegacyColors.color(format) != null) colour = 0xFF000000 | LegacyColors.color(format);
             } else if (seen++ >= plainIndex) break;
         }
         return colour;
@@ -571,9 +572,9 @@ public final class EquipmentHud {
         component.visit((style, text) -> {
             if (style.getColor() != null && !text.contains("§")) {
                 for (ChatFormatting format : ChatFormatting.values())
-                    if (format.isColor() && format.getColor() != null
-                            && format.getColor() == style.getColor().getValue()) {
-                        out.append('§').append(format.getChar());
+                    if (LegacyColors.isColor(format) && LegacyColors.color(format) != null
+                            && LegacyColors.color(format) == style.getColor().getValue()) {
+                        out.append('§').append(LegacyColors.code(format));
                         break;
                     }
             }
@@ -660,7 +661,7 @@ public final class EquipmentHud {
 
     private static void armorTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         Minecraft mc = Minecraft.getInstance();
-        if (!armorEnabled || mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (!armorEnabled || mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
         int[] bounds = HudLayout.bounds(ARMOR_ID);
         if (bounds == null) return;
         float scale = HudLayout.scale(ARMOR_ID);
@@ -672,7 +673,7 @@ public final class EquipmentHud {
 
     private static void petItemTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         Minecraft mc = Minecraft.getInstance();
-        if (!petEnabled || activePet == null || mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (!petEnabled || activePet == null || mc.player == null || mc.level == null || mc.gui.hud.isHidden()) return;
         int[] bounds = HudLayout.bounds(PET_ID);
         if (bounds == null) return;
         ItemStack icon = heldIcon(heldFor(activePet));

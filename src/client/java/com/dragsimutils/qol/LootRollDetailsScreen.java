@@ -44,7 +44,7 @@ public final class LootRollDetailsScreen extends ChatScreen {
         this.parent = parent;
         this.source = rows.stream().map(Component::copy).map(c -> (Component) c).toList();
         Minecraft mc = Minecraft.getInstance();
-        this.chatScroll = parent instanceof ChatScreen ? mc.gui.getChat().chatScrollbarPos : 0;
+        this.chatScroll = parent instanceof ChatScreen ? mc.gui.hud.getChat().chatScrollbarPos : 0;
         // Store the click position, not the moving pointer: hovering rows must never
         // chase the cursor. Relative coordinates also keep the pin usable on resize.
         this.anchorX = mc.mouseHandler.getScaledXPos(mc.getWindow()) / Math.max(1, mc.getWindow().getGuiScaledWidth());
@@ -188,7 +188,7 @@ public final class LootRollDetailsScreen extends ChatScreen {
     }
 
     private void restoreChatScroll() {
-        ChatComponent chat = minecraft.gui.getChat();
+        ChatComponent chat = minecraft.gui.hud.getChat();
         chat.resetChatScroll();
         chat.scrollChat(chatScroll);
     }
@@ -198,7 +198,7 @@ public final class LootRollDetailsScreen extends ChatScreen {
         Screen destination = parent;
         if (destination instanceof ChatScreen && minecraft.player == null) destination = null;
         // Reuse the interrupted ChatScreen so its draft survives the pinned hover.
-        minecraft.setScreen(destination);
+        minecraft.gui.setScreen(destination);
         if (destination instanceof ChatScreen) restoreChatScroll();
     }
 

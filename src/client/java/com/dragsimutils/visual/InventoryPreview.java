@@ -44,7 +44,7 @@ public final class InventoryPreview {
         HudLayout.register(ID, "Inventory Preview", .5f, .8019093f, InventoryPreview::drawAt);
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("dragsimutils", "inventory_preview"), (g, delta) -> {
             Minecraft mc = Minecraft.getInstance();
-            if (enabled && mc.player != null && mc.level != null && !mc.options.hideGui)
+            if (enabled && mc.player != null && mc.level != null && !mc.gui.hud.isHidden())
                 HudLayout.draw(ID, g, mc.font, false);
         });
     }

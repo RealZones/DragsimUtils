@@ -135,7 +135,7 @@ public final class TerminalSolver {
     private static boolean eligible(AbstractContainerScreen<?> screen) {
         Minecraft mc = Minecraft.getInstance();
         if (checkWorld != mc.level) quickCheck = false;
-        return enabled && !quickCheck && mc.player != null && mc.screen == screen && DungeonContext.active()
+        return enabled && !quickCheck && mc.player != null && mc.gui.screen() == screen && DungeonContext.active()
                 && TerminalLogic.type(screen.getTitle().getString()) != TerminalLogic.Type.UNKNOWN;
     }
 

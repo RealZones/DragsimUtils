@@ -2,7 +2,7 @@ package com.dragsimutils.hooks;
 
 import com.dragsimutils.visual.RarityOutline;
 import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** The same moment on the HUD: each hotbar item, just before it is drawn at x, y. */
-@Mixin(Gui.class)
+@Mixin(Hud.class)
 abstract class HotbarSlotMixin {
 
     @Inject(method = "extractSlot", at = @At("HEAD"))
