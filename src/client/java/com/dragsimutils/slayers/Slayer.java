@@ -10,12 +10,16 @@ import com.dragsimutils.ui.Module;
 import com.dragsimutils.ui.Setting;
 import com.dragsimutils.ui.Theme;
 import com.dragsimutils.zealots.Zealots;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.minecraft.ChatFormatting;
+import net.minecraft.world.InteractionResult;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -97,9 +101,10 @@ public final class Slayer {
 
     /** A live Voidgloom quest, including one already underway when the client joined. */
     public static boolean voidgloomQuestActive() {
-        Minecraft mc = Minecraft.getInstance();
-        return voidgloomQuest(Area.sidebarLine(mc, "Slayer:"), Area.sidebarLine(mc, "XP:"),
-                questActive(), slayer);
+        // Asked every frame by the Zealot Tracker. Chat settles it without the sidebar.
+        if (questActive() && VOIDGLOOM.equals(slayer)) return true;
+        Area.Sidebar sidebar = Area.recentSidebar(Minecraft.getInstance());
+        return voidgloomQuest(sidebar.line("Slayer:"), sidebar.line("XP:"), false, slayer);
     }
 
     static boolean voidgloomQuest(String slayerLine, String xpLine,
@@ -116,6 +121,10 @@ public final class Slayer {
     private static long reminderEnteredAt;
     private static boolean reminderQueued;
     private static final long REMINDER_DELAY_MS = 2_000;
+    private static final long REMINDER_POPUP_MS = 60_000, REMINDER_GRACE_MS = 10_000;
+    /** A mob only leaves the client this close by dying; walking off takes it past tracking range. */
+    private static final double KILL_RANGE = 16.0;
+    private static long reminderPopupAt, questEndedAt;
     enum QuestStatus { UNKNOWN, ACTIVE, NOT_STARTED }
 
     /**
@@ -165,7 +174,7 @@ public final class Slayer {
                                 () -> killTimeInChat, v -> killTimeInChat = v),
                         new Setting.Section("Alerts"),
                         new Setting.Toggle("Quest reminder",
-                                "When you enter a slayer area without a quest, print a clickable /slayer reminder.",
+                                "A /slayer link when you arrive without a quest.",
                                 () -> questReminder, v -> questReminder = v),
                         new Setting.Section("Session"),
                         new Setting.Action("Reset session",
@@ -192,6 +201,17 @@ public final class Slayer {
             if (overlay) return;
             onLine(plain(message));
         });
+        AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+            if (level.isClientSide()) fightingWithoutQuest();
+            return InteractionResult.PASS;
+        });
+        // Bonemerangs and scythes never land a melee hit, so a mob dying has to count as well.
+        // Right clicks do not: on their own they only prove someone used a teleport item.
+        ClientEntityEvents.ENTITY_UNLOAD.register((entity, level) -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (entity instanceof Monster && mc.player != null
+                    && entity.position().distanceTo(mc.player.position()) <= KILL_RANGE) fightingWithoutQuest();
+        });
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("dragsimutils", "slayer"),
                 (g, delta) -> draw(g));
         HudLayout.register("slayer.timer", "Slayer Tracker", 0f, 0.009f,
@@ -211,6 +231,7 @@ public final class Slayer {
             return;
         }
         if (line.contains(BOSS_SLAIN)) {
+            questEndedAt = System.currentTimeMillis();
             if (bossUp) {
                 Run r = cur();
                 r.lastKillMs = System.currentTimeMillis() - bossSpawnedAt;
@@ -226,6 +247,7 @@ public final class Slayer {
         if (line.contains(QUEST_START) || line.contains(QUEST_DONE) || line.contains(QUEST_FAILED)) {
             questActive = line.contains(QUEST_START);
             if (questActive) questXp = 0;
+            else questEndedAt = System.currentTimeMillis();
             bossUp = false;
             if (questActive) {
                 reminderQueued = false;
@@ -275,7 +297,7 @@ public final class Slayer {
      * True when this line is a person talking, not the server announcing.
      *
      * Player chat arrives through the SAME event as server announcements - on this
-     * server "[MVP+] leafonwild: fear" is a system message, not a chat message - so
+     * server "[MVP+] SomePlayer: hi" is a system message, not a chat message - so
      * without this anyone typing "the boss has appeared!" fires a miniboss alert, with
      * the sound. Found by checking the log format rather than by it happening in game,
      * which is the cheaper way to find it.
@@ -418,10 +440,18 @@ public final class Slayer {
         // Slayer panel on screen while the player is doing something else. The sidebar
         // also covers a quest already active when the client joins mid-run.
         String area = reminderSlayer();
-        boolean sidebarQuest = questStatus(
-                Area.sidebarLine(mc, "Slayer:"), Area.sidebarLine(mc, "XP:"),
-                Area.sidebarShows(mc, REVENANT.equals(area) ? Area.Where.CRYPTS : Area.Where.VOID_SEPULTURE))
-                == QuestStatus.ACTIVE;
+        // Nothing below can show the panel outside a slayer area or the End, and a quest
+        // chat has confirmed needs no sidebar. Otherwise this read the whole scoreboard
+        // every frame, wherever you were; now it is at most a tick old.
+        if (area.isEmpty() && !Area.end()) return;
+        boolean sidebarQuest = false;
+        if (!questActive()) {
+            Area.Sidebar sidebar = Area.recentSidebar(mc);
+            sidebarQuest = questStatus(
+                    sidebar.line("Slayer:"), sidebar.line("XP:"),
+                    sidebar.shows(REVENANT.equals(area) ? Area.Where.CRYPTS : Area.Where.VOID_SEPULTURE))
+                    == QuestStatus.ACTIVE;
+        }
         // Voidgloom quests also run in Dragon's Den. Location alone must not hide
         // a quest confirmed by chat, but an old session must stay hidden in the hub.
         if (!trackerVisible(!area.isEmpty(), Area.end(), questActive(), sidebarQuest)) return;
@@ -570,10 +600,11 @@ public final class Slayer {
 
     private static void watchQuestTier(Minecraft mc) {
         if (mc.player == null || mc.level == null || ++tierTick % 20 != 0) return;
-        boolean changed = TIERS.observeSidebar(Area.sidebarLine(mc, "Slayer:"));
-        changed |= TIERS.observeSidebar(Area.sidebarLine(mc, "Atoned Horror"));
-        changed |= TIERS.observeSidebar(Area.sidebarLine(mc, "Revenant Horror"));
-        changed |= TIERS.observeSidebar(Area.sidebarLine(mc, "Voidgloom Seraph"));
+        Area.Sidebar sidebar = Area.readSidebar(mc);
+        boolean changed = TIERS.observeSidebar(sidebar.line("Slayer:"));
+        changed |= TIERS.observeSidebar(sidebar.line("Atoned Horror"));
+        changed |= TIERS.observeSidebar(sidebar.line("Revenant Horror"));
+        changed |= TIERS.observeSidebar(sidebar.line("Voidgloom Seraph"));
         if (changed) TIERS.save(tierFile());
     }
 
@@ -592,12 +623,43 @@ public final class Slayer {
         }
         if (area.isEmpty() || !questReminder || mc.player == null) return;
         if (!reminderQueued || now - reminderEnteredAt < REMINDER_DELAY_MS) return;
-        Area.Where place = REVENANT.equals(area) ? Area.Where.CRYPTS : Area.Where.VOID_SEPULTURE;
-        QuestStatus status = questStatus(Area.sidebarLine(mc, "Slayer:"), Area.sidebarLine(mc, "XP:"),
-                Area.sidebarShows(mc, place));
+        QuestStatus status = questStatus(mc, area);
         if (status == QuestStatus.UNKNOWN) return; // The new sidebar has not arrived yet.
         reminderQueued = false;
-        if (status != QuestStatus.NOT_STARTED) return;
+        if (status == QuestStatus.NOT_STARTED) questLink(mc, area);
+    }
+
+    private static QuestStatus questStatus(Minecraft mc, String area) {
+        Area.Where place = REVENANT.equals(area) ? Area.Where.CRYPTS : Area.Where.VOID_SEPULTURE;
+        Area.Sidebar sidebar = Area.readSidebar(mc);
+        return questStatus(sidebar.line("Slayer:"), sidebar.line("XP:"), sidebar.shows(place));
+    }
+
+    /**
+     * The arrival link scrolls away and then nothing says so again, and a player can go on
+     * killing Crypt Ghouls with the link long gone from chat. So fighting
+     * brings it back as a popup, with a fresh link to click.
+     */
+    private static void fightingWithoutQuest() {
+        Minecraft mc = Minecraft.getInstance();
+        long now = System.currentTimeMillis();
+        if (mc.player == null || !popupDue(now, reminderPopupAt, questEndedAt)) return;
+        String area = reminderSlayer();
+        if (area.isEmpty() || questStatus(mc, area) != QuestStatus.NOT_STARTED) return;
+        reminderPopupAt = now;
+        Alerts.slayerQuest();
+        if (questReminder) questLink(mc, area);
+    }
+
+    /**
+     * Once a minute, because a fight is dozens of hits. Not straight after a quest ends either:
+     * nobody needs telling while they reach for /slayer with the sword still swinging.
+     */
+    static boolean popupDue(long now, long lastPopup, long questEnded) {
+        return now - lastPopup >= REMINDER_POPUP_MS && now - questEnded >= REMINDER_GRACE_MS;
+    }
+
+    private static void questLink(Minecraft mc, String area) {
         String command = reminderCommand(area);
         mc.player.sendSystemMessage(Component.literal("")
                 .append(Component.literal("[Dragsim Utils] ").withStyle(ChatFormatting.DARK_PURPLE))
@@ -610,7 +672,7 @@ public final class Slayer {
     static QuestStatus questStatus(String slayerLine, String xpLine, boolean areaConfirmed) {
         if (xpLine != null) return QuestStatus.ACTIVE;
         if (slayerLine != null) {
-            String status = slayerLine.replaceAll("§[0-9A-Fa-fK-Ok-orRxX]", "")
+            String status = com.dragsimutils.zealots.Zealots.strip(slayerLine)
                     .trim().toLowerCase(Locale.ROOT);
             return status.contains("not started")
                     ? areaConfirmed ? QuestStatus.NOT_STARTED : QuestStatus.UNKNOWN
@@ -664,6 +726,6 @@ public final class Slayer {
     }
 
     private static String plain(Component c) {
-        return c == null ? "" : c.getString().replaceAll("§[0-9A-Fa-fK-Ok-orRxX]", "").trim();
+        return c == null ? "" : com.dragsimutils.zealots.Zealots.strip(c.getString()).trim();
     }
 }

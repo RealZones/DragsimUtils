@@ -7,7 +7,6 @@ on:
       - README.md
       - CHANGELOG.md
       - LICENSE
-      - AGENTS.md
       - 'docs/**'
       - '.github/ISSUE_TEMPLATE/**'
   pull_request:

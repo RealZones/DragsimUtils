@@ -14,7 +14,7 @@ final class CacheVisibility {
         else if (seen) gone = true;
     }
     // If the placement target was unavailable, the private result still bounds
-    // the lifetime. The recording removes its vault about 1.5s after this result.
+    // the lifetime. The vault goes about 1.5s after this result.
     void result(long now) { if (visible(now) && !seen) until = now + 5_000; }
     boolean visible(long now) { return until >= 0 && now <= until; }
     void reset() { until = -1; seen = gone = false; }

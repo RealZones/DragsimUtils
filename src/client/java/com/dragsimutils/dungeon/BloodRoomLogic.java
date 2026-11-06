@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 /**
  * The Watcher's opening script, and how long it runs before anything actually spawns.
  *
- * Recorded from a real run:
+ * As the server sends it in a run:
  *
  *   00:00:53  The BLOOD DOOR has been opened!
  *   00:00:55  I have watching you closely since we last met.
@@ -42,7 +42,7 @@ public final class BloodRoomLogic {
     /** What a single run measured, in milliseconds. */
     private static final List<Long> observed = new ArrayList<>();
 
-    /** The estimate before anything has been measured: one recorded run. */
+    /** The estimate before anything has been measured: one real run. */
     public static final long DEFAULT_DELAY_MS = 10_000;
 
     public static boolean door(String line) {

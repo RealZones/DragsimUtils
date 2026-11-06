@@ -2,10 +2,12 @@ package com.dragsimutils.ui;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.font.TextFieldHelper;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.StringUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,11 +45,16 @@ public class SettingsScreen extends Screen {
     private boolean suppressCharacter;
     /** The command row being typed into, or null. */
     private Setting.Command editing;
+    private TextFieldHelper commandInput;
     /** The colour picker; open when a Color row's swatch was clicked. */
     private final ColorPicker picker = new ColorPicker();
+    private final KeybindsView keys = new KeybindsView();
 
     private final Map<String, Anim> anims = new HashMap<>();
     private final List<Row> rows = new ArrayList<>();
+    private List<SettingsOutline.Entry> outline;
+    private int outlineShape;
+    private Setting.Command outlineFocus;
 
     private record Row(Setting setting, int index, boolean expanded, boolean matching, int children,
                        int x, int y, int w, int h) {
@@ -56,7 +63,10 @@ public class SettingsScreen extends Screen {
     private final Map<Setting.Note, WrappedNote> wrappedNotes = new IdentityHashMap<>();
 
     private static final int ROW_H = 46;
-    private static final int SECTION_ROW_H = 30;
+    /** Lower than a setting row, so a heading reads as a break in the list rather than another item in it. */
+    private static final int SECTION_ROW_H = 24;
+    /** Room above a grouped page's next feature, with a rule in it. */
+    private static final int HEAD_GAP = 10;
     /** A note wraps to this many lines at most; a tier with forty items is still a glance. */
     private static final int NOTE_LINES = 6;
 
@@ -75,6 +85,15 @@ public class SettingsScreen extends Screen {
     }
     private static final int TRACK_H = 4;
     private static final int KNOB = 10;
+    /**
+     * A slider in the right-hand column with every other control, once a row has the width.
+     * Under its label it took a taller row and made the column of switches stutter.
+     */
+    private static final int INLINE_SLIDER_ROW = 360, INLINE_TRACK = 130, INLINE_VALUE = 46;
+
+    private static boolean inline(int rowWidth) {
+        return rowWidth >= INLINE_SLIDER_ROW;
+    }
 
     /**
      * Where each module's page was scrolled to, and which page was open when the GUI
@@ -148,6 +167,22 @@ public class SettingsScreen extends Screen {
     boolean capturesKeyboard() { return binding != null || editing != null || picker.typing() || suppressCharacter; }
     boolean bindingKey() { return binding != null; }
 
+    int focusedCommandBottom() {
+        for (Row row : rows) if (row.setting() == editing) return row.y() + row.h() + 4;
+        return -1;
+    }
+
+    private void focusCommand(Setting.Command command) {
+        editing = command;
+        binding = null;
+        // Vanilla editing supplies selection, Unicode-safe deletion and clipboard
+        // shortcuts without replacing the hand-laid-out row with a separate widget.
+        commandInput = new TextFieldHelper(command::command, command::command,
+                () -> StringUtil.filterText(TextFieldHelper.getClipboardContents(minecraft)),
+                TextFieldHelper.createClipboardSetter(minecraft), value -> true);
+        commandInput.setCursorToEnd();
+    }
+
     void cancelInteractions() {
         dragging = null; binding = null; editing = null; suppressCharacter = false; picker.close();
     }
@@ -187,15 +222,33 @@ public class SettingsScreen extends Screen {
         int start = embedded ? embeddedY : contentTop() + Theme.PAD - scroll;
         int y = start;
 
-        for (SettingsOutline.Entry entry : SettingsOutline.visible(module.settings(), settingsQuery, collapsed)) {
+        for (SettingsOutline.Entry entry : outline()) {
             Setting s = entry.setting();
-            int h = s instanceof Setting.Section ? (embedded ? 24 : SECTION_ROW_H)
+            int h = s instanceof Setting.Section ? (embedded ? 20 : SECTION_ROW_H)
                     : s instanceof Setting.Note n ? noteH(n, w)
-                    : embedded && !(s instanceof Setting.Slider) ? 34 : ROW_H;
+                    : s instanceof Setting.Binds b ? keys.height(b, w, settingsQuery)
+                    : embedded && (!(s instanceof Setting.Slider) || inline(w)) ? 34 : ROW_H;
+            if (FeatureCatalog.head(s) && y != start) y += HEAD_GAP;
             rows.add(new Row(s, entry.index(), entry.expanded(), entry.matching(), entry.children(), x, y, w, h));
             y += h + 4;
         }
         contentHeight = y - start + (embedded ? 4 : Theme.PAD);
+    }
+
+    /**
+     * Which rows are showing. layout() runs several times a frame and this only changes on a
+     * click, a keystroke or a search, so it is kept while nothing it depends on has moved.
+     * A search always recomputes: live text decides what matches.
+     */
+    private List<SettingsOutline.Entry> outline() {
+        List<Setting> settings = module.settings();
+        int shape = 31 * collapsed.hashCode() + settings.size();
+        if (outline == null || !settingsQuery.isEmpty() || shape != outlineShape || editing != outlineFocus) {
+            outline = SettingsOutline.visible(settings, settingsQuery, collapsed, editing);
+            outlineShape = shape;
+            outlineFocus = editing;
+        }
+        return outline;
     }
 
     private int maxScroll() {
@@ -208,15 +261,15 @@ public class SettingsScreen extends Screen {
 
     /** Where a slider's track runs. Shared by drawing and dragging so they cannot disagree. */
     private static int trackX(Row r) {
-        return r.x;
+        return inline(r.w) ? r.x + r.w - INLINE_VALUE - INLINE_TRACK : r.x;
     }
 
     private static int trackW(Row r) {
-        return Math.max(1, r.w - 60);
+        return inline(r.w) ? INLINE_TRACK : Math.max(1, r.w - 60);
     }
 
     private static int trackY(Row r) {
-        return r.y + r.h - 16;
+        return inline(r.w) ? r.y + r.h / 2 - TRACK_H / 2 : r.y + r.h - 16;
     }
 
     @Override
@@ -347,8 +400,8 @@ public class SettingsScreen extends Screen {
                 int color = r.matching ? Theme.accent() : Theme.muted();
                 MenuIcons.arrow(g, r.x, ty - 2,
                         r.expanded ? MenuIcons.Arrow.DOWN : MenuIcons.Arrow.RIGHT, color);
-                Draw.text(g, font, Draw.fit(font, sec.label(), r.w - 46), r.x + 16, ty, color);
-                Draw.textRight(g, font, Integer.toString(r.children), r.x + r.w, ty, Theme.dim());
+                // No child count: an open section shows it, and on a closed one a "1" only asked for a click.
+                Draw.text(g, font, Draw.fit(font, sec.label(), r.w - 16), r.x + 16, ty, color);
                 Draw.rect(g, r.x, r.y + r.h - 1, r.w, 1, Theme.hair());
                 continue;
             }
@@ -363,6 +416,13 @@ public class SettingsScreen extends Screen {
                 continue;
             }
 
+            if (r.setting instanceof Setting.Binds b) {
+                keys.draw(g, font, b, r.x, r.y, r.w, binding, settingsQuery, top, bottom, mouseX, mouseY);
+                continue;
+            }
+
+            if (FeatureCatalog.head(r.setting) && r != rows.getFirst())
+                Draw.rect(g, r.x - 8, r.y - HEAD_GAP / 2 - 3, r.w + 16, 1, Theme.line());
             boolean hovered = contains(r.x, r.y, r.w, r.h, mouseX, mouseY);
             float h = anim("row:" + r.setting.label()).to(hovered ? 1f : 0f, Theme.EASE_FAST);
             Draw.roundedRect(g, r.x - 8, r.y, r.w + 16, r.h, Theme.RADIUS,
@@ -432,6 +492,7 @@ public class SettingsScreen extends Screen {
     private int controlWidth(Row row) {
         return switch (row.setting) {
             case Setting.Toggle ignored -> 30;
+            case Setting.Slider ignored -> inline(row.w) ? INLINE_TRACK + INLINE_VALUE : 0;
             case Setting.Choice choice -> valueWidth(row, choice.get().get(), 20);
             case Setting.Color color -> valueWidth(row, Setting.Color.hex(color.get().getAsInt()), 34);
             case Setting.Action action -> valueWidth(row, action.button(), 20);
@@ -540,11 +601,24 @@ public class SettingsScreen extends Screen {
         if (focus) Draw.roundedOutline(g, r.x, fy, fw, 20, Theme.RADIUS - 2, Theme.accent(), Theme.raised());
         String text = c.command();
         boolean empty = text.isEmpty();
-        String shown = empty && !focus ? "type a command, /warp end" : text;
-        // Long commands scroll so the end - what you are typing - stays in view.
-        while (font.width(shown) > fw - 14 && shown.length() > 1) shown = shown.substring(1);
-        if (focus && (System.currentTimeMillis() / 500) % 2 == 0) shown += "_";
+        int cursor = focus ? commandInput.getCursorPos() : text.length();
+        int start = 0;
+        while (start < cursor && font.width(text.substring(start, cursor)) > fw - 15)
+            start = text.offsetByCodePoints(start, 1);
+        String shown = font.plainSubstrByWidth(empty && !focus ? "type a command, /warp end"
+                : text.substring(start), fw - 14);
+        if (focus && commandInput.isSelecting()) {
+            int from = Math.clamp(Math.min(cursor, commandInput.getSelectionPos()) - start, 0, shown.length());
+            int to = Math.clamp(Math.max(cursor, commandInput.getSelectionPos()) - start, 0, shown.length());
+            int left = r.x + 7 + font.width(shown.substring(0, from));
+            int right = r.x + 7 + font.width(shown.substring(0, to));
+            g.fill(left, fy + 4, right, fy + 15, Draw.alpha(Theme.accent(), .35f));
+        }
         Draw.text(g, font, shown, r.x + 7, fy + 6, empty && !focus ? Theme.dim() : Theme.text());
+        if (focus && (System.currentTimeMillis() / 500) % 2 == 0) {
+            int caret = r.x + 7 + font.width(text.substring(start, cursor));
+            g.fill(caret, fy + 4, caret + 1, fy + 15, Theme.text());
+        }
 
         drawChip(g, font, c.id(), r.x + fw + 8, r.y + r.h / 2 - CHIP_H / 2, mouseX, mouseY);
 
@@ -571,7 +645,9 @@ public class SettingsScreen extends Screen {
 
     private void drawToggle(GuiGraphicsExtractor g, int x, int y, float t) {
         int w = 20, h = 10;
-        Draw.roundedRect(g, x, y, w, h, h / 2, Draw.lerp(Theme.line(), Theme.pos(), t));
+        // The accent, like the switches on the rows above: a switch is a choice, and green
+        // here said "healthy" while the same control on a row said nothing of the sort.
+        Draw.roundedRect(g, x, y, w, h, h / 2, Draw.lerp(Theme.line(), Theme.accent(), t));
         int knobX = x + 1 + (int) ((w - h) * t);
         Draw.roundedRect(g, knobX, y + 1, h - 2, h - 2, (h - 2) / 2,
                 Draw.lerp(Theme.dim(), Theme.text(), t));
@@ -627,6 +703,10 @@ public class SettingsScreen extends Screen {
             if (r.y + r.h <= contentTop() || r.y >= contentBottom()) continue;
             if (!contains(r.x - 8, r.y, r.w + 16, r.h, mx, my)) continue;
             if (r.setting instanceof Setting.Note) return true;
+            if (r.setting instanceof Setting.Binds b) {
+                String key = keys.click(b, r.x, r.y, r.w, settingsQuery, mx, my);
+                return key == null || listen(key, event);
+            }
             if (r.setting instanceof Setting.Section) {
                 if (!collapsed.add(r.index)) collapsed.remove(r.index);
                 sectionViews.put(module.id(), Set.copyOf(collapsed));
@@ -636,8 +716,7 @@ public class SettingsScreen extends Screen {
             if (r.setting instanceof Setting.Command c) {
                 int fy = r.y + r.h / 2 - 10, fw = cmdFieldW(r);
                 if (contains(r.x, fy, fw, 20, mx, my)) {
-                    editing = c;
-                    binding = null;
+                    focusCommand(c);
                 } else if (contains(r.x + fw + 8, r.y + r.h / 2 - CHIP_H / 2, CHIP_W, CHIP_H, mx, my)) {
                     editing = null;
                     return listen(c.id(), event);
@@ -653,6 +732,9 @@ public class SettingsScreen extends Screen {
                 return true;
             }
             if (r.setting instanceof Setting.Slider s) {
+                // On the track only when it sits beside the label: a click on the words
+                // must not throw the value to the far left.
+                if (inline(r.w) && mx < trackX(r) - 6) return true;
                 dragging = s;
                 applyDrag(r, s, mx);
                 return true;
@@ -676,7 +758,10 @@ public class SettingsScreen extends Screen {
                 return true;
             }
             if (r.setting instanceof Setting.Action a) {
+                List<Setting> before = List.copyOf(module.settings());
                 a.run().run();
+                for (Setting setting : module.settings())
+                    if (setting instanceof Setting.Command command && !before.contains(setting)) focusCommand(command);
                 return true;
             }
         }
@@ -747,7 +832,7 @@ public class SettingsScreen extends Screen {
             return true;
         }
         if (editing != null) {
-            if (event.isAllowedChatCharacter()) editing.command(editing.command() + event.codepointAsString());
+            commandInput.charTyped(event);
             return true;
         }
         return embedded ? false : super.charTyped(event);
@@ -758,11 +843,9 @@ public class SettingsScreen extends Screen {
         if (picker.keyPressed(event.key())) return true;
         if (event.key() == 256 && picker.open()) { picker.close(); return true; }
         if (editing != null) {
-            if (event.key() == 259 && !editing.command().isEmpty()) {          // backspace
-                editing.command(editing.command().substring(0, editing.command().length() - 1));
-            } else if (event.key() == 257 || event.key() == 256 || event.key() == 335) {   // enter, escape, numpad enter
+            if (event.key() == 257 || event.key() == 256 || event.key() == 335) {   // enter, escape, numpad enter
                 editing = null;
-            }
+            } else commandInput.keyPressed(event);
             return true;
         }
         if (binding != null) {

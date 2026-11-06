@@ -15,7 +15,7 @@ record SeraphBoss(String family, String tier, String health, String maxHealth, i
         if (!match.find()) return null;
         boolean rift = match.group(1).equals("Riftborn Seraph");
         String tier = match.group(2);
-        // The recorded T5 calls itself Riftborn Seraph, without a tier in its tag.
+        // The T5 calls itself Riftborn Seraph, without a tier in its tag.
         // A missing tier on a Voidgloom tag is not the same boss format.
         if ((!rift && tier == null) || (rift && tier != null && !tier.equals("V"))) return null;
         int hits;

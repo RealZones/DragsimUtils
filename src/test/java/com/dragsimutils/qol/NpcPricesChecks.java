@@ -13,7 +13,7 @@ public final class NpcPricesChecks {
     public static void main(String[] args) throws Exception {
         equal(NpcPrices.parseSale("§aYou sold 2x Judgement Core for §610,000,000 coins!"),
                 new NpcPrices.Sale("Judgement Core", 2, 5_000_000));
-        equal(NpcPrices.parseSale("§aYou sold 64x Enchanted Obsidian for §64,096,000 coins!"), null);
+        equal(NpcPrices.parseSale("§aYou sold 64x Enchanted Obsidian for §64,096,000 coins!"), new NpcPrices.Sale("Enchanted Obsidian", 64, 64_000L));
         equal(NpcPrices.parseSale("You sold 1x [Lvl 1] Enderman for 50,000,000 coins!"),
                 new NpcPrices.Sale("Enderman", 1, 50_000_000));
         equal(NpcPrices.parseSale("You sold 1x [Lvl 1] Golden Dragon for 50,000,000 coins!"), null);
@@ -43,6 +43,22 @@ public final class NpcPricesChecks {
         equal(NpcPrices.ambiguousPet("[Lvl 1] Enderman"), false);
         equal(NpcPrices.ambiguousPet("[Lvl 1] Wolf"), false);
         equal(NpcPrices.ambiguousPet("[Lvl 1] Golden Dragon"), true);
+        // A dropped pet names its rarity, so a price can be saved against it.
+        equal(NpcPrices.ambiguousPet("[Lvl 1] Tiger (Legendary)"), false);
+        equal(NpcPrices.priceInfo("Strange Relic"), null);
+        NpcPrices.track("Strange Relic");
+        equal(NpcPrices.takings(java.util.Map.of("Strange Relic", 1), "Goop", 0).unpriced(), true);
+        NpcPrices.track("Spicy Wart");
+        NpcPrices.track("Revenant Viscera");
+        NpcPrices.track("Zombie Talisman");
+        equal(NpcPrices.takings(java.util.Map.of("Spicy Wart", 2, "Revenant Viscera", 1), "Zombie Talisman", 1),
+                new NpcPrices.Takings(2 * 15_000_000L + 500_000L - 200_000L, false));
+        equal(NpcPrices.coins(-35_000_000L), "-35.0m");
+        // Sold before any list held it, and the price is there when one does, on all of them.
+        equal(NpcPrices.observe("You sold 1x Mystery Orb for 7,000,000 coins!"), true);
+        equal(NpcPrices.priceInfo("Mystery Orb"), null);
+        NpcPrices.track("Mystery Orb");
+        equal(NpcPrices.priceInfo("Mystery Orb").source(), "Learned sale");
         equal(NpcPrices.priceInfo("Enderman").source(), "Built-in NPC");
         equal(NpcPrices.observedPrice("[Lvl 1] Enderman").coins(), 50_000_000L);
         equal(NpcPrices.ZEALOT_ITEMS, List.of("Golden Eye", "Rift Pass", "Summoning Eye", "Warden Catalyst"));

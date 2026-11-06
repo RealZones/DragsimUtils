@@ -81,7 +81,7 @@ public final class Zealots {
             from = ++i + 1;
         }
         // Names are stripped in entity scans as well as menus. Compiling a regex
-        // for each name dominated allocations in the recorded performance sample.
+        // for each name dominated allocations in a performance sample.
         return plain == null ? s : plain.append(s, from, s.length()).toString();
     }
 

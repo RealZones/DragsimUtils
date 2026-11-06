@@ -125,8 +125,8 @@ public final class QuizLogic {
      * Which way the answer pillars face, from where their three labels stand: {dx, dz}
      * with one of them ±1, or null when the labels are not three or not that shape.
      *
-     * The room is two pillars side by side with the third set back between them (a
-     * recording: A at +4,+5, B at +7,0, C at +4,-5, entered from the west). The pillar
+     * The room is two pillars side by side with the third set back between them (one
+     * room: A at +4,+5, B at +7,0, C at +4,-5, entered from the west). The pillar
      * set back is the corner opposite the longest side, and the front is the way from
      * it to the middle of that side. Read off the room rather than assumed, so a room
      * built facing another way still gets its own front.

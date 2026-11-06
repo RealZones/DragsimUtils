@@ -2,7 +2,7 @@ package com.dragsimutils.dragons;
 
 import java.util.regex.Pattern;
 
-/** Timing from server announcements, kept separate for recorded-cycle regression checks. */
+/** Timing from server announcements, kept separate for cycle regression checks. */
 final class EggRespawnTiming {
     static final long FALLBACK_MS = 10_000;
     private static final Pattern WAIT = Pattern.compile(

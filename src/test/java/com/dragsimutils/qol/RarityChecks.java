@@ -30,8 +30,8 @@ public final class RarityChecks {
         // 26.1 binds item defaults during resource loading, after bootstrap. This
         // headless fixture supplies every component it reads and needs no defaults.
         Items.PLAYER_HEAD.builtInRegistryHolder().bindComponents(DataComponentMap.EMPTY);
-        List<ItemStack> recorded = recordedBadges();
-        magicalPower(recorded);
+        List<ItemStack> real = recordedBadges();
+        magicalPower(real);
         changingStacks();
         legacyLore();
         System.out.println(checks + " rarity metadata, badge and MP checks passed");
@@ -42,7 +42,7 @@ public final class RarityChecks {
         // fixture retains only name, lore, rarity and type; profiles/UUIDs are omitted.
         CompoundTag root;
         try (var input = RarityChecks.class.getResourceAsStream("rarity-badges.nbt")) {
-            if (input == null) throw new AssertionError("Missing recorded badge fixture");
+            if (input == null) throw new AssertionError("Missing real badge fixture");
             root = NbtIo.readCompressed(input, NbtAccounter.create(64 * 1024));
         }
         List<ItemStack> stacks = new ArrayList<>();
@@ -53,8 +53,8 @@ public final class RarityChecks {
             String name = item.getStringOr("name", "");
             Rarity.Info expected = name.contains("Void Artifact")
                     ? new Rarity.Info("LEGENDARY", "ACCESSORY") : new Rarity.Info("RARE", "ACCESSORY");
-            check(Rarity.read(item.getCompoundOrEmpty("data"), lore).equals(expected), "recorded metadata: " + name);
-            check(Rarity.read(new CompoundTag(), lore).equals(expected), "recorded badge fallback: " + name);
+            check(Rarity.read(item.getCompoundOrEmpty("data"), lore).equals(expected), "real metadata: " + name);
+            check(Rarity.read(new CompoundTag(), lore).equals(expected), "real badge fallback: " + name);
             ItemStack stack = stack(name, item.getCompoundOrEmpty("data"), lore);
             check(Rarity.of(stack) == (name.contains("Void Artifact") ? 0xFFAA00 : 0x5555FF), "outline colour: " + name);
             stack.remove(DataComponents.LORE);
@@ -65,12 +65,12 @@ public final class RarityChecks {
         return stacks;
     }
 
-    private static void magicalPower(List<ItemStack> recorded) throws Exception {
+    private static void magicalPower(List<ItemStack> real) throws Exception {
         var field = Recipes.class.getDeclaredField("CHESTS");
         field.setAccessible(true);
         @SuppressWarnings("unchecked")
         Map<String, List<ItemStack>> chests = (Map<String, List<ItemStack>>) field.get(null);
-        List<ItemStack> bag = new ArrayList<>(recorded);
+        List<ItemStack> bag = new ArrayList<>(real);
         // A navigation icon must not earn MP just because it mentions an accessory.
         bag.add(stack("Accessory Bag", new CompoundTag(), List.of(Component.literal("Place a rare accessory here"))));
         chests.put("Accessory Bag #1", bag);

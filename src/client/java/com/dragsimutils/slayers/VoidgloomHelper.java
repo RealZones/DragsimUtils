@@ -47,7 +47,7 @@ import java.util.regex.Pattern;
  * moving boss read as a HUD glitch rather than an outline.
  *
  * The Nukekubi heads are marked too, box filled solid and a tracer to each, but only
- * while your own boss is up: no head has ever been caught in an entity dump, so they
+ * while your own boss is up: no head has ever been inspected up close, so they
  * are taken to be what a head is on every server that has copied this fight - an
  * armour stand wearing a player head - or anything named for them. Outside your fight
  * nothing is looked for, which is what keeps a decorative head in the End from
@@ -205,8 +205,8 @@ public final class VoidgloomHelper {
     /**
      * Your boss, and only yours.
      *
-     * The name tag carries no owner - the dump shows "☠ Voidgloom Seraph IV 2.5B/2.5B❤
-     * Radiation", nothing like the "(Fear's soul)" the devotees get - so ownership
+     * The name tag carries no owner - it reads "☠ Voidgloom Seraph IV 2.5B/2.5B❤
+     * Radiation", nothing like the "(Name's soul)" the devotees get - so ownership
      * cannot be read off the entity. What can be read is timing and place: your boss
      * spawns at your feet in the second after YOUR "SLAYER BOSS SPAWNING" line, which
      * nobody else's chat prints. A short claim window and ten-block radius identify it;
@@ -277,7 +277,7 @@ public final class VoidgloomHelper {
     /**
      * What a Seraph calls itself: its own name, or the text riding it.
      *
-     * The End's T4 wore its tag as its own name. The T4 recorded in the Rift on
+     * The End's T4 wore its tag as its own name. The T4 seen in the Rift on
      * 2026-09-29 does not: its body is an Enderman named "Dinnerbone" - the server's
      * upside-down trick - and "☠ Voidgloom Seraph IV 2.0B/2.5B❤ Radiation" is a
      * TextDisplay riding it. Read by name alone, nothing in that fight was a Seraph, so
@@ -330,9 +330,8 @@ public final class VoidgloomHelper {
         Entity best = null;
         double bestD = range * range;
         for (Entity e : mc.level.entitiesForRendering()) {
-            if (tag(e) == null) continue;
             double d = e.position().distanceToSqr(near);
-            if (d < bestD) {
+            if (d < bestD && tag(e) != null) {
                 bestD = d;
                 best = e;
             }
@@ -365,7 +364,7 @@ public final class VoidgloomHelper {
     }
 
     private static String stripName(Component name) {
-        return name == null ? null : name.getString().replaceAll("§[0-9A-Fa-fK-Ok-orRxX]", "");
+        return name == null ? null : com.dragsimutils.zealots.Zealots.strip(name.getString());
     }
 
     // ── in the world ──────────────────────────────────────────────────────────
@@ -405,7 +404,7 @@ public final class VoidgloomHelper {
     }
 
     private static String Zealots_strip(String s) {
-        return s.replaceAll("§[0-9A-Fa-fK-Ok-orRxX]", "");
+        return com.dragsimutils.zealots.Zealots.strip(s);
     }
 
     private static void gizmos() {
@@ -427,8 +426,9 @@ public final class VoidgloomHelper {
         if (heads && Slayer.bossUp() && bossEntity != null && !bossEntity.isRemoved()
                 && bossEntity.level() == mc.level && System.currentTimeMillis() - bossSeen < 2000) {
             for (Entity e : mc.level.entitiesForRendering()) {
-                if (e == mc.player || !isHead(e)) continue;
+                if (e == mc.player) continue;
                 if (e.position().distanceTo(mc.player.position()) > HEAD_RANGE) continue;
+                if (!isHead(e)) continue;
                 // The head, not the whole stand: its box is mostly empty pole.
                 AABB bb = e.getBoundingBox();
                 double cx = (bb.minX + bb.maxX) / 2, cz = (bb.minZ + bb.maxZ) / 2;

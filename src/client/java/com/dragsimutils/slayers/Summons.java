@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 
 /**
  * Raised souls drawn see-through. The Voidling Extremists a scythe raises stand between
- * you and the boss - a recorded T5 had three of them filling the middle of the screen.
+ * you and the boss - a T5 had three of them filling the middle of the screen.
  *
  * A soul is known by its name tag, "[Lv100] Voidling Extremist (liambal's soul)", which
  * rides a stand over the body rather than the body itself. Once a tick the tags are found

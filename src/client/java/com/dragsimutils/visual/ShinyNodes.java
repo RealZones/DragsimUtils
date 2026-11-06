@@ -135,7 +135,7 @@ public final class ShinyNodes {
 
     record Candidate(BlockPos pos, Direction face) { }
 
-    /** The captured packet is centred 0.1 above the block, with eight spread particles. */
+    /** The server's particle packet is centred 0.1 above the block, with eight spread particles. */
     static Candidate burstCandidate(double x, double y, double z, int count,
                                     double dx, double dy, double dz, double speed) {
         if (count != 8 || !near(fraction(x), .5) || !near(fraction(y), .1)

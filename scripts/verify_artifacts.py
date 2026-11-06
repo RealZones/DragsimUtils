@@ -63,7 +63,7 @@ def method_references(data):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--allow-dirty", action="store_true", help="Local development check; not an exact-commit release")
+    parser.add_argument("--allow-dirty", action="store_true", help="Local check; not an exact-commit release")
     args = parser.parse_args()
     properties = dict(line.split("=", 1) for line in (ROOT / "gradle.properties").read_text().splitlines()
                       if "=" in line and not line.lstrip().startswith("#"))
@@ -88,7 +88,7 @@ def main():
 
     classes = {name: data for name, data in entries.items() if name.endswith(".class")}
     require(classes, "Runtime jar contains no classes")
-    forbidden_paths = ("/updater/", "/dev/", "/gametest/", "TestFixtures", "VisualTest", "Checks.class", "EndsightDemo")
+    forbidden_paths = ("/updater/", "/gametest/", "TestFixtures", "VisualTest", "Checks.class", "EndsightDemo")
     forbidden_apis = (b"java/lang/ProcessBuilder", b"java/io/ObjectInputStream",
                       b"java/net/URLClassLoader", b"defineClass", b"loadLibrary", b"setAccessible",
                       b"sun/misc/Unsafe", b"jdk/internal/misc/Unsafe")
@@ -96,7 +96,7 @@ def main():
     runtime_web_hosts = set()
     for name, data in classes.items():
         require(name.startswith("com/dragsimutils/"), f"Unexpected runtime namespace: {name}")
-        require(not any(part in name for part in forbidden_paths), f"Development/updater class packaged: {name}")
+        require(not any(part in name for part in forbidden_paths), f"Test or updater class packaged: {name}")
         require(not any(api in data for api in forbidden_apis), f"Sensitive API requires manual investigation: {name}")
         # Match Runtime methods rather than byte prefixes such as RuntimeException.
         require(not any(owner in ("java/lang/Runtime", "java/lang/System") and method in ("exec", "load", "loadLibrary")

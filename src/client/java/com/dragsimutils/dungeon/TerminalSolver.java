@@ -65,9 +65,8 @@ public final class TerminalSolver {
      * was the flicker on every click, and it emptied the board under the solver, which read
      * "Waiting for numbered panes" between every Click in Order click. Worse, letting go of
      * the mouse while carrying it dropped the pane into whatever slot was under the cursor:
-     * the 2026-10-23 22:35 recording has a purple pane put in slot 47, an Ancient Maxor's
-     * Chestplate lifted out of the inventory, and the server reshuffling the purple board
-     * after the stray clicks. This sends the same packet with the menu as it stands, so the
+     * a purple pane could land in slot 47, or a chestplate be lifted out of the inventory, and
+     * the server would reshuffle the board after the stray clicks. This sends the same packet with the menu as it stands, so the
      * server does the one click and its slot updates are the only change anyone sees. The
      * click is remembered so its hint disappears at once instead of a ping later.
      */

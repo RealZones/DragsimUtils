@@ -308,10 +308,13 @@ public final class Cooldowns {
 
     private static boolean riftwalkerEquipped(Player player) {
         ItemStack head = player.getItemBySlot(EquipmentSlot.HEAD);
-        return (hasPiece(head, "helmet") || anySetHelmet(head))
-                && hasPiece(player.getItemBySlot(EquipmentSlot.CHEST), "chestplate")
+        // The helmet last: its any-set check joins and searches the whole lore, and this
+        // runs three times a frame. Asked first, it did that for every helmet that was not
+        // Riftwalker's, on players with no Riftwalker piece on at all.
+        return hasPiece(player.getItemBySlot(EquipmentSlot.CHEST), "chestplate")
                 && hasPiece(player.getItemBySlot(EquipmentSlot.LEGS), "leggings")
-                && hasPiece(player.getItemBySlot(EquipmentSlot.FEET), "boots");
+                && hasPiece(player.getItemBySlot(EquipmentSlot.FEET), "boots")
+                && (hasPiece(head, "helmet") || anySetHelmet(head));
     }
 
     private static boolean hasPiece(ItemStack stack, String piece) {
@@ -325,7 +328,7 @@ public final class Cooldowns {
      * hand then, not to what is in hand when it lands. It used to go to the item in hand,
      * and a swap from the sword to the katana handed the sword's "18s" to Soulcry. The
      * gap was then kept as a standing correction that only ever grew, so every Soulcry
-     * after it read 18s against a 4s cooldown - the screenshot that found this. Now a
+     * after it read 18s against a 4s cooldown. Now a
      * line two recently held items could have said is dropped, a wait longer than an
      * ability's cooldown is never that ability's, and nothing is kept but a length
      * measured against a use seen starting.
@@ -399,7 +402,10 @@ public final class Cooldowns {
     private static boolean carrying(Minecraft mc, Timer t) {
         if (t == RIFTWALKER) {
             if (mc.player == null || !riftwalkerEquipped(mc.player)) return false;
-            t.icon = mc.player.getItemBySlot(EquipmentSlot.CHEST).copy();
+            ItemStack chest = mc.player.getItemBySlot(EquipmentSlot.CHEST);
+            // Visibility is checked during measurement and drawing. Keep the icon
+            // snapshot until its count/components change instead of copying it each pass.
+            if (t.icon == null || !ItemStack.matches(t.icon, chest)) t.icon = chest.copy();
             return true;
         }
         long now = System.currentTimeMillis();

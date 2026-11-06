@@ -7,7 +7,7 @@
 <p align="center">
   Official Dragsim mod for trackers, dungeon guidance and a cleaner HUD.
   <br>
-  <strong>1.0.0</strong> · Minecraft <strong>26.1.2</strong> · Fabric
+  <strong>1.10.0</strong> · Minecraft <strong>26.1.2</strong> · Fabric
 </p>
 
 <p align="center">
@@ -21,16 +21,17 @@
 
 | | What you get |
 | --- | --- |
-| **Dragons & zealots** | Dragon timers, Protector tracking, loot alerts and personal drop statistics. |
+| **Dragons & zealots** | Dragon timers, dragon hitboxes, Protector tracking, loot alerts and personal drop statistics. |
 | **Slayers** | Boss and quest timers, drop/profit tracking, reminders and Voidgloom helpers. |
+| **The Rift** | Goop Timer, Goop Tracker with your fights and profit, and Goop Bait reminders. |
 | **Dungeons** | Dungeon map, key alerts, puzzle and terminal hints, and personal bests. |
 | **Mining** | Mining sessions, powder rates, drill fuel, forge timers and recipe browsing. |
-| **Inventory** | Storage previews, item inspection, slot locking and armor-swap protection. |
+| **Inventory** | Storage overview with every page on one screen, item inspection, slot locking and armor-swap protection. |
 | **Profiles** | Browse a player's inventory, equipment, pets, skills, progression and bestiary. |
-| **Customization** | Movable HUDs, themes, favorites, settings search, keybinds and chat filters. |
+| **Customization** | Movable HUDs, themes, favorites, settings search, a Keybinds page, Perspective Mode and chat filters. |
 | **Discord** | Optional Rich Presence with controls for showing your name, area and purse. |
 
-Networth is **temporarily disabled** in 1.0.0. Player profiles remain available.
+Networth is **temporarily disabled**. Player profiles remain available.
 
 ## Requirements
 
@@ -45,7 +46,7 @@ Networth is **temporarily disabled** in 1.0.0. Player profiles remain available.
 
 1. Set up a **Minecraft 26.1.2 Fabric** instance in your launcher.
 2. Put the matching **Fabric API** jar in its `mods` folder.
-3. Download [`dragsimutils-1.0.0.jar`](https://github.com/RealZones/DragsimUtils/releases)
+3. Download [`dragsimutils-1.10.0.jar`](https://github.com/RealZones/DragsimUtils/releases)
    and place it in the same folder.
 4. Launch Minecraft and press **Right Shift** to open Dragsim Utils.
 
@@ -64,6 +65,7 @@ quick access, and assign shortcuts to the features you use most.
 | `/pv <player>` or `/duprofile <player>` | Look up a player. |
 | `/drops` | View your tracked boss drops. |
 | `/drops session` | View drops from this session. |
+| `/drops goop` or `/drops cache` | View your Goop or Crypt Cache drops, spending and profit. |
 
 The menu key can be changed in Minecraft's **Controls** settings.
 

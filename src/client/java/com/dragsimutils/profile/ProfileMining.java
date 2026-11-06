@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import static com.dragsimutils.profile.ProfileData.*;
 
-/** Slot positions and caps transcribed from the owner's saved in-game HotD scan. */
+/** Slot positions and caps of the HotD tree, as its in-game menu lays them out. */
 public final class ProfileMining {
     public record Node(String id,String name,int tier,int column,int maximum,boolean ability) { }
     public static final List<Node> NODES=load();

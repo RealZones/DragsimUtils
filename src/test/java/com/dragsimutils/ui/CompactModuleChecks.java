@@ -19,6 +19,7 @@ public final class CompactModuleChecks {
         moduleSearch();
         settingsOutline();
         duplicateHeadings();
+        focusedCommandSearch();
         rowTargets();
         System.out.println(checks + " compact module checks passed");
     }
@@ -198,7 +199,9 @@ public final class CompactModuleChecks {
     private static void moduleSearch() {
         List<Setting> settings = settings();
         Module module = TestFixtures.module("overlay", "INVENTORY Overlay", "Frame timing", "Dungeons", settings);
-        equal(settings.stream().map(Object::getClass).collect(java.util.stream.Collectors.toSet()),
+        List<Setting> everyKind = new ArrayList<>(settings);
+        everyKind.add(new Setting.Binds("Keybinds", () -> List.of(new Setting.Bind("id", "Zealot Tracker", "", "The End"))));
+        equal(everyKind.stream().map(Object::getClass).collect(java.util.stream.Collectors.toSet()),
                 Set.of(Setting.class.getPermittedSubclasses()));
         yes(module.matches(null), "null query hid module");
         yes(module.matches(" \t\n "), "blank query hid module");
@@ -296,6 +299,21 @@ public final class CompactModuleChecks {
         equal(entry(headingMatch, 4), new SettingsOutline.Entry(settings.get(4), 4, true, true, 0));
         equal(collapsed, Set.of(2, 4));
         equal(SettingsOutline.visible(settings, "", collapsed), normal);
+    }
+
+    private static void focusedCommandSearch() {
+        Setting.Command old = new Setting.Command("old", "/warp end", () -> { });
+        Setting.Command added = new Setting.Command("new", "", () -> { });
+        List<Setting> settings = List.of(new Setting.Section("Commands"), old,
+                new Setting.Section("Extra"), added);
+        Set<Integer> collapsed = Set.of(2);
+        equal(indices(SettingsOutline.visible(settings, "warp end", collapsed)), List.of(0, 1));
+        equal(indices(SettingsOutline.visible(settings, "warp end", collapsed, added)), List.of(0, 1, 2, 3));
+        yes(!entry(SettingsOutline.visible(settings, "warp end", collapsed, added), 3).matching(),
+                "focused blank command was presented as a search match");
+        equal(indices(SettingsOutline.visible(settings, "", collapsed, added)), List.of(0, 1, 2, 3));
+        equal(collapsed, Set.of(2));
+        equal(indices(SettingsOutline.visible(settings, "warp end", collapsed)), List.of(0, 1));
     }
 
     private static Module module(String id, String title, String category) {

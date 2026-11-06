@@ -317,7 +317,6 @@ public final class MiningSession {
         // Not with a window open: what comes out of the PV or a chest in the grace window
         // after a swing is not mined. 21 Fine "mined" in four minutes were 21 Fine pulled.
         countInventoryGain(mc, counting && mc.screen == null);
-        if (System.currentTimeMillis() - auditFlushed > 5_000) flushAudit();
         if (lifetimeDirty && now - lifetimeSaved > 5_000) saveLifetime();
         mining = counting;
         lastTick = now;
@@ -383,9 +382,6 @@ public final class MiningSession {
      * of amethyst that was never mined. Net counting handles tracked material; a short
      * crafted-item carry also handles material brought into a session, whose removal
      * hits the zero floor before its compacted form arrives in a later tick.
-     *
-     * Every change that is counted is written to mining.tsv, so a session can be
-     * checked line by line against the blocks in powder.tsv.
      */
     private static void countInventoryGain(Minecraft mc, boolean count) {
         Map<String, Long> now = materialValues(mc);
@@ -405,7 +401,6 @@ public final class MiningSession {
                 lifetime.material(m, after - before);
                 lifetimeDirty = true;
                 if (delta > 0) focus(m, System.currentTimeMillis());
-                audit(m, after - before, after, "bag");
             }
         }
         lastValues.clear();
@@ -424,33 +419,6 @@ public final class MiningSession {
                 out.merge(material.name(), material.units(), Long::sum);
         }
         return out;
-    }
-
-    // ── the audit trail ──────────────────────────────────────────────────────
-    private static final StringBuilder auditPending = new StringBuilder();
-    private static long auditFlushed;
-
-    private static void audit(String material, long delta, long total, String from) {
-        auditPending.append(System.currentTimeMillis()).append('\t').append(material).append('\t')
-                .append(delta).append('\t').append(total).append('\t').append(from).append('\n');
-    }
-
-    private static void flushAudit() {
-        if (auditPending.length() == 0) return;
-        String out = auditPending.toString();
-        auditPending.setLength(0);
-        auditFlushed = System.currentTimeMillis();
-        try {
-            java.nio.file.Path dir = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("dragsimutils");
-            java.nio.file.Files.createDirectories(dir);
-            java.nio.file.Path log = dir.resolve("mining.tsv");
-            if (java.nio.file.Files.exists(log) && java.nio.file.Files.size(log) > 4L * 1024 * 1024) {
-                java.nio.file.Files.move(log, dir.resolve("mining.tsv.1"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            }
-            java.nio.file.Files.writeString(log, out, java.nio.charset.StandardCharsets.UTF_8,
-                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
-        } catch (java.io.IOException ignored) {
-        }
     }
 
     private static Map<String, Long> materialValues(Minecraft mc) {
@@ -682,8 +650,8 @@ public final class MiningSession {
 
     private static long value(String material, long raw) {
         if (material.equalsIgnoreCase("Amethyst")) {
-            // Sale evidence on 2026-10-20: Fine/Flawless have the same raw-unit
-            // value, but unfinished Flawed and Rough sell for less. The tracker
+            // Fine and Flawless are worth the same per raw unit, but unfinished
+            // Flawed and Rough are worth less. The tracker
             // stores raw-equivalent gains so compactor moves stay neutral.
             long remainder = raw % AMETHYST_FINE;
             return raw / AMETHYST_FINE * 1_305_600L

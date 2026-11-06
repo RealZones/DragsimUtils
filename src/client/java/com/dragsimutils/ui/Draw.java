@@ -3,7 +3,13 @@ package com.dragsimutils.ui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.locale.Language;
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Surfaces are built from fill and text to avoid a custom rendering pipeline.
@@ -16,6 +22,25 @@ public final class Draw {
             "dragsimutils", "textures/gui/settings.png");
 
     private Draw() {
+    }
+
+    private static final int[][] CAP_INSETS = new int[65][];
+    static {
+        for (int r = 0; r < CAP_INSETS.length; r++) {
+            CAP_INSETS[r] = new int[r];
+            for (int i = 0; i < r; i++) CAP_INSETS[r][i] = computeInset(r, i);
+        }
+    }
+
+    private static int computeInset(int r, int row) {
+        double dy = r - row - 0.5;
+        return (int) Math.round(r - Math.sqrt(Math.max(0, (double) r * r - dy * dy)));
+    }
+
+    static int capInset(int r, int row) {
+        // Geometry depends only on radius, never palette, scale or position. Bound
+        // the cache and retain the exact arithmetic for unusual larger radii.
+        return r < CAP_INSETS.length ? CAP_INSETS[r][row] : computeInset(r, row);
     }
 
     public static void rect(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
@@ -37,18 +62,7 @@ public final class Draw {
             return;
         }
 
-        g.fill(x, y + r, x + w, y + h - r, color);
-
-        for (int i = 0; i < r; i++) {
-            double dy = r - i - 0.5;
-
-            int inset = (int) Math.round(
-                    r - Math.sqrt(Math.max(0, (double) r * r - dy * dy))
-            );
-
-            g.fill(x + inset, y + i, x + w - inset, y + i + 1, color);
-            g.fill(x + inset, y + h - i - 1, x + w - inset, y + h - i, color);
-        }
+        ShapeRenderState.submit(g, ShapeRenderState.Kind.ROUNDED, x, y, w, h, r, 15, color);
     }
 
     /**
@@ -66,31 +80,8 @@ public final class Draw {
             return;
         }
 
-        g.fill(x, y + r, x + w, y + h - r, color);
-
-        for (int i = 0; i < r; i++) {
-            double dy = r - i - 0.5;
-
-            int inset = (int) Math.round(
-                    r - Math.sqrt(Math.max(0, (double) r * r - dy * dy))
-            );
-
-            g.fill(
-                    x + (tl ? inset : 0),
-                    y + i,
-                    x + w - (tr ? inset : 0),
-                    y + i + 1,
-                    color
-            );
-
-            g.fill(
-                    x + (bl ? inset : 0),
-                    y + h - i - 1,
-                    x + w - (br ? inset : 0),
-                    y + h - i,
-                    color
-            );
-        }
+        int corners = (tl ? 1 : 0) | (tr ? 2 : 0) | (bl ? 4 : 0) | (br ? 8 : 0);
+        ShapeRenderState.submit(g, ShapeRenderState.Kind.ROUNDED, x, y, w, h, r, corners, color);
     }
 
     /**
@@ -111,19 +102,36 @@ public final class Draw {
         if (w <= 1 || h <= 1) return;
         int r = Math.min(radius, Math.min(w, h) / 2);
 
+        if (r >= 0) {
+            ShapeRenderState.submit(g, ShapeRenderState.Kind.RING, x, y, w, h, r, 15, color);
+            return;
+        }
+
         rect(g, x + r, y, w - 2 * r, 1, color);
         rect(g, x + r, y + h - 1, w - 2 * r, 1, color);
         rect(g, x, y + r, 1, h - 2 * r, color);
         rect(g, x + w - 1, y + r, 1, h - 2 * r, color);
 
         for (int i = 0; i < r; i++) {
-            double dy = r - i - 0.5;
-            int inset = (int) Math.round(r - Math.sqrt(Math.max(0, (double) r * r - dy * dy)));
+            int inset = capInset(r, i);
             rect(g, x + inset, y + i, 1, 1, color);
             rect(g, x + w - inset - 1, y + i, 1, 1, color);
             rect(g, x + inset, y + h - i - 1, 1, 1, color);
             rect(g, x + w - inset - 1, y + h - i - 1, 1, 1, color);
         }
+    }
+
+    /** Four strips with the corner pixels absent, submitted as one GUI element. */
+    public static void frame(GuiGraphicsExtractor g, int x, int y, int w, int h, int colour) {
+        ShapeRenderState.submit(g, ShapeRenderState.Kind.FRAME, x, y, w, h, 0, 0, colour);
+    }
+
+    public static void corners(GuiGraphicsExtractor g, int x, int y, int w, int h, int length, int colour) {
+        ShapeRenderState.submit(g, ShapeRenderState.Kind.CORNERS, x, y, w, h, length, 0, colour);
+    }
+
+    public static void badge(GuiGraphicsExtractor g, int x, int y, int size, int colour) {
+        ShapeRenderState.submit(g, ShapeRenderState.Kind.BADGE, x, y, size, size, 0, 0, colour);
     }
 
     /** A fixed-size texture keeps the gear legible regardless of the active font pack. */
@@ -198,19 +206,47 @@ public final class Draw {
         return (na << 24) | (color & 0x00FFFFFF);
     }
 
+    private static final int ORDERED_MAX = 4096;
+    private static final Map<String, FormattedCharSequence> ordered = new HashMap<>();
+    private static Language orderedIn;
+
+    /**
+     * A string in display order, worked out once.
+     *
+     * g.text with a String runs ICU's bidirectional pass on every call, for English text,
+     * every frame. A profile of the menu had that as a quarter of everything allocated while
+     * drawing, and every HUD line was paying it too. The result only depends on the string
+     * and the language, so it is kept; a full map is emptied, since HUD numbers never repeat
+     * and an eviction order is not worth keeping for them.
+     */
+    private static FormattedCharSequence ordered(String s) {
+        Language language = Language.getInstance();
+        if (language != orderedIn) {
+            ordered.clear();
+            orderedIn = language;
+        }
+        FormattedCharSequence line = ordered.get(s);
+        if (line == null) {
+            if (ordered.size() >= ORDERED_MAX) ordered.clear();
+            line = language.getVisualOrder(FormattedText.of(s));
+            ordered.put(s, line);
+        }
+        return line;
+    }
+
     public static void text(GuiGraphicsExtractor g, Font font, String s,
                             int x, int y, int color) {
-        g.text(font, s, x, y, color);
+        g.text(font, ordered(s), x, y, color);
     }
 
     public static void textRight(GuiGraphicsExtractor g, Font font, String s,
                                  int right, int y, int color) {
-        g.text(font, s, right - font.width(s), y, color);
+        g.text(font, ordered(s), right - font.width(s), y, color);
     }
 
     public static void textCentered(GuiGraphicsExtractor g, Font font, String s,
                                     int cx, int y, int color) {
-        g.text(font, s, cx - font.width(s) / 2, y, color);
+        g.text(font, ordered(s), cx - font.width(s) / 2, y, color);
     }
 
     /**
@@ -224,14 +260,9 @@ public final class Draw {
 
         if (room <= 0) return ellipsis;
 
-        StringBuilder out = new StringBuilder();
-
-        for (int i = 0; i < s.length(); i++) {
-            if (font.width(out.toString() + s.charAt(i)) > room) break;
-            out.append(s.charAt(i));
-        }
-
-        return out.append(ellipsis).toString();
+        // One pass. Measuring a growing copy per character was quadratic, on every cut
+        // label, every frame.
+        return font.plainSubstrByWidth(s, room) + ellipsis;
     }
 
     /**

@@ -10,7 +10,7 @@ import java.util.Set;
  *
  * The server moves a marker in half-pixel steps, a few times a second. This used to chase
  * each step exponentially, which arrives fast and then waits for the next one: stop, go,
- * stop, go - the jitter Fear saw. Now each step is spread over the time the previous one
+ * stop, go, which read as jitter. Now each step is spread over the time the previous one
  * took, so a walking player moves at an even speed, about one update behind.
  */
 final class DungeonMapMotion {

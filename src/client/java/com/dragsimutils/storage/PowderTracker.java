@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -175,12 +174,9 @@ public final class PowderTracker {
     private static long activeMs, lastTickMs;
     /** The held drill's fuel, read off its lore; -1 when nothing held says Fuel. */
     private static long fuel = -1, fuelMax;
-    private static long fuelLogged = -1;
     /** The fuel line's switch lives on the Mining Session page, beside the Drill CD's. */
     public static boolean showFuel = true;
     private static BlockPos lastCentre;
-    /** Perks already dumped this session; the Ender and Void trees are separate pages of the same menu. */
-    private static final java.util.Set<String> dumped = new java.util.HashSet<>();
     private static int tickN;
 
     public static Module module() {
@@ -205,23 +201,19 @@ public final class PowderTracker {
         loadRates();
         ClientTickEvents.END_CLIENT_TICK.register(PowderTracker::tick);
         // Whatever is still buffered when the game closes.
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STOPPING.register(c -> flush());
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (overlay) return;
             String line = clean(message.getString());
             if (line.startsWith("You used Void Infusion")) {
                 Matcher m = INFUSION_FOR.matcher(line);
                 infusedUntil = System.currentTimeMillis() + Math.round(m.find() ? num(m.group(1)) : 30) * 1000L;
-                log("A", "used", line);
             } else if (line.startsWith("Your Void Infusion has worn off")) {
                 infusedUntil = 0;
-                log("A", "worn");
             }
         });
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("dragsimutils", "powder_tracker"), (g, delta) -> draw(g));
         HudLayout.register(ID, "Powder Tracker", 0.006f, 0.48f, (g, font, x, y, sample) -> drawAt(g, font, x, y, sample));
         HudLayout.register(FUEL_ID, "Drill Fuel", 0.006f, 0.64f, (g, font, x, y, sample) -> drawFuel(g, font, x, y, sample));
-        log("S", "session start");
     }
 
     private static void reset() {
@@ -279,7 +271,6 @@ public final class PowderTracker {
         long now = System.currentTimeMillis();
         recentXp.addLast(new long[]{now, hundredths});
         lastActive = now;
-        log("X", m.group(1), m.group(2));
     }
 
     private static void tick(Minecraft mc) {
@@ -300,7 +291,6 @@ public final class PowderTracker {
             remindReady();
         }
         VoidFragments.tick(mc);
-        if (nowMs - lastFlush > FLUSH_MS) flush();
     }
 
     /**
@@ -367,7 +357,6 @@ public final class PowderTracker {
                 rawBlocks[e.getValue()]++;
                 recent.addLast(new long[]{ms, e.getValue(), w});
                 recentActive.addLast(new long[]{activeMs, e.getValue()});
-                log("B", KIND[e.getValue()], p.getX(), p.getY(), p.getZ());
             }
         }
         nearby.clear();
@@ -378,15 +367,11 @@ public final class PowderTracker {
         long[] seen = {-1, -1};
         int[] seenBuff = {-1, -1};
         List<Upgrade> offered = new ArrayList<>();
-        int slotNo = 0;
         for (Slot slot : containerSlots(screen)) {
-            slotNo++;
             ItemStack s = slot.getItem();
             if (s.isEmpty()) continue;
             String name = clean(s.getHoverName().getString());
             List<String> tip = tooltip(s);
-            boolean fresh = dumped.add(name);
-            if (fresh) for (String line : tip) log("R", slotNo, line);
             int level = -1, max = -1, current = -1;
             for (String line : tip) {
                 Matcher p = POWDER.matcher(line);
@@ -411,7 +396,6 @@ public final class PowderTracker {
                     offered.add(new Upgrade(name, type(cost.group(2)), Math.round(num(cost.group(1)))));
                 }
             }
-            if (level >= 0 && fresh) log("P", name, level, max);
         }
         if (!offered.isEmpty()) upgrades = List.copyOf(offered);
         for (int t = 0; t < 2; t++) {
@@ -464,7 +448,6 @@ public final class PowderTracker {
                 rate[major] = w > 0 && rate[major] > 0 ? (oldNow * w + learned * n) / (w + n) : learned;
                 rateWeight[major] = Math.min(RATE_WEIGHT_CAP, w + n);
                 rateBuff[major] = buff[t];
-                log("RATE", KIND[major], value - old, blocksSince(major), String.format(Locale.ROOT, "%.3f", learned), buff[t]);
             }
         }
         // The session gain is exact at every visit: the menu's total, less where the
@@ -492,7 +475,6 @@ public final class PowderTracker {
         }
         total[t] = value;
         for (int k = 0; k < KIND.length; k++) if (POWDER_OF[k] == t) blocksAtVisit[k] = blocks[k];
-        log("H", TYPE[t], value, since);
         return true;
     }
 
@@ -525,14 +507,6 @@ public final class PowderTracker {
         boolean miningHud = MiningSession.hudVisible();
         if (miningHud && showFuel && fuel >= 0) HudLayout.draw(FUEL_ID, g, mc.font, false);
         boolean show = miningHud && enabled && (total[0] >= 0 || total[1] >= 0);
-        // The readout has gone missing mid-session with nothing in the log to say why.
-        // Every flip of the one gate that hides it is written down, with the state behind
-        // it, so the next disappearance names its own cause instead of being guessed at.
-        if (show != wasShown) {
-            wasShown = show;
-            log("VIS", show ? "shown" : "hidden", "enabled=" + enabled, "mining=" + miningHud,
-                    "ender=" + total[0], "void=" + total[1]);
-        }
         if (!show) return;
         HudLayout.draw(ID, g, mc.font, false);
     }
@@ -612,12 +586,6 @@ public final class PowderTracker {
         }
         fuel = f;
         fuelMax = max;
-        if (f >= 0 && f != fuelLogged) {
-            fuelLogged = f;
-            double blocksAll = 0;
-            for (double b : blocks) blocksAll += b;
-            log("F", f, max, Math.round(blocksAll));
-        }
     }
 
     private static long[] parseFuel(List<String> lines) {
@@ -754,8 +722,6 @@ public final class PowderTracker {
      * themselves are read off pet tooltips as they go past, per pet and rarity.
      */
     private static String petKey = "";
-    /** Whether the readout was drawn last frame, so only the changes are logged. */
-    private static boolean wasShown;
 
     public static void petChanged(String pet) {
         petKey = pet;
@@ -860,47 +826,6 @@ public final class PowderTracker {
             if (!line.isBlank()) out.add(line);
         }
         return out;
-    }
-
-    /** One TSV line: kind, wall-clock ms, fields. Appended, never rotated; it is the dataset. */
-    /**
-     * The measurement log, buffered.
-     *
-     * This used to open, append to and close powder.tsv for every single block broken -
-     * three or four file handles a second while mining, on the thread that draws the
-     * frame. That is a stutter you can feel. The lines are held and written every few
-     * seconds instead; nothing reads the file while the game is running, so the only
-     * cost of being late is the last few seconds if the game is killed outright.
-     */
-    private static final StringBuilder pending = new StringBuilder();
-    private static long lastFlush;
-    private static final long FLUSH_MS = 5_000;
-
-    private static void log(String kind, Object... fields) {
-        pending.append(kind).append('\t').append(System.currentTimeMillis());
-        for (Object f : fields) pending.append('\t').append(String.valueOf(f).replace('\t', ' ').replace('\n', ' '));
-        pending.append('\n');
-        if (pending.length() > 64_000) flush();
-    }
-
-    static void flush() {
-        if (pending.length() == 0) return;
-        String out = pending.toString();
-        pending.setLength(0);
-        lastFlush = System.currentTimeMillis();
-        try {
-            Files.createDirectories(file("").getParent());
-            Path log = file("powder.tsv");
-            // One line per block broken grew it without end - 7.6 MB and 136,000 lines
-            // by September. Past 8 MB the file is moved to powder.tsv.1 (replacing the
-            // one before) and a fresh one started, so the recent history is always kept.
-            if (Files.exists(log) && Files.size(log) > 8L * 1024 * 1024) {
-                Files.move(log, file("powder.tsv.1"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            }
-            Files.writeString(log, out, StandardCharsets.UTF_8,
-                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-        } catch (IOException ignored) {
-        }
     }
 
     private static String clean(String s) {

@@ -159,8 +159,8 @@ public final class TicTacToe {
      * version looked for lapis and redstone blocks, which is what the other game uses,
      * while this server lays the board in blue and red concrete. Four iron blocks and
      * their buttons were found, two of nine cells read as tokens, the grid never
-     * completed, and it sat on "Finding board" with no hint as to why. Guessing the ids
-     * off a screenshot failed twice; a /record of the room gave them in one line.
+     * completed, and it sat on "Finding board" with no hint as to why. The ids
+     * below are read off the real room.
      */
     private static TicTacToeBoard.Plane plane(BlockState state) {
         if (!(state.getBlock() instanceof ButtonBlock)) return null;
@@ -188,7 +188,7 @@ public final class TicTacToe {
         if (tile.is(Blocks.BLUE_CONCRETE)) return button.isAir() ? TicTacToeLogic.BLUE : TicTacToeBoard.UNKNOWN;
         if (tile.is(Blocks.RED_CONCRETE)) return button.isAir() ? TicTacToeLogic.RED : TicTacToeBoard.UNKNOWN;
         // A free square is an iron block that still has its button. Both halves are
-        // checked: a recording of a real board shows exactly four iron blocks each with
+        // checked: a real board has exactly four iron blocks each with
         // a stone button in front and nothing in front of the tokens, so this is the
         // shape rather than a guess, and keeping it tight stops a lone lever elsewhere
         // in the room seeding a board that is not there.

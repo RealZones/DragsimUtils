@@ -17,12 +17,12 @@ public final class RevenantSpawnTilesChecks {
         same(null, RevenantSpawnTiles.parse("1 2 3 not-a-number"), "bad count");
         same(null, RevenantSpawnTiles.parse("1 2 3 1000001"), "unbounded count");
         same(new RevenantSpawnTiles.Tile(new BlockPos(70, 37, -19), 36),
-                RevenantSpawnTiles.parse("70 37 -19 36"), "recorded tile");
+                RevenantSpawnTiles.parse("70 37 -19 36"), "real tile");
         same(new RevenantSpawnTiles.Tile(new BlockPos(-2, -4, 5), 2),
                 RevenantSpawnTiles.parse(" -2   -4  5  2 "), "signed coordinates");
         BlockPos known = new BlockPos(70, 37, -19);
         same(known, RevenantSpawnTiles.burstTile(new Vec3(70.9, 38, -18.8), Set.of(known)),
-                "burst snaps to the recorded ground block");
+                "burst snaps to the real ground block");
         same(new BlockPos(12, 63, -4),
                 RevenantSpawnTiles.burstTile(new Vec3(12.3, 64, -3.9), Set.of(known)),
                 "new burst uses the block below the ground position");

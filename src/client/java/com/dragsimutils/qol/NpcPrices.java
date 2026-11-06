@@ -49,6 +49,7 @@ public final class NpcPrices {
     private static final long MAX_PRICE = 1_000_000_000_000L;
     private static final Pattern SOLD = Pattern.compile("^You sold ([0-9,]+)x (.+?) for ([0-9,]+) coins!$");
     private static final Pattern PET = Pattern.compile("^\\[Lvl [0-9]+\\]\\s+", Pattern.CASE_INSENSITIVE);
+    private static final Pattern RATED_PET = Pattern.compile("\\((?:Common|Uncommon|Rare|Epic|Legendary|Mythic)\\)$");
     private static final Pattern AMOUNT = Pattern.compile("^([0-9][0-9,]*(?:\\.[0-9]{1,3})?)\\s*([kmb]?)$", Pattern.CASE_INSENSITIVE);
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Map<String, Long> BUILTIN = Map.of(
@@ -84,6 +85,8 @@ public final class NpcPrices {
     private static final Map<String, Long> custom = new LinkedHashMap<>();
     private static final Map<String, String> customNames = new LinkedHashMap<>();
     private static final Map<String, Evidence> sales = new LinkedHashMap<>();
+    /** What the Cache and Goop trackers have recorded. Their lists are whatever the server pays out. */
+    private static final Set<String> tracked = new java.util.HashSet<>();
     private static boolean learning = true, salesDirty;
     private static long lastFlush;
     private static long revision;
@@ -137,8 +140,9 @@ public final class NpcPrices {
         // Only Enderman and Wolf are priced as level-independent Zealot drops.
         // Other pets stay ambiguous rather than inheriting a species-wide price.
         boolean pet = level.find();
+        // A drop names its rarity, which is all that sets its price: it always arrives at level 1.
         boolean knownPet = pet && (name.substring(level.end()).equalsIgnoreCase("Enderman")
-                || name.substring(level.end()).equalsIgnoreCase("Wolf"));
+                || name.substring(level.end()).equalsIgnoreCase("Wolf") || RATED_PET.matcher(name).find());
         if (knownPet) name = name.substring(level.end());
         String key = name.replace('\u2019', '\'').toLowerCase(Locale.ROOT);
         if (key.equals("infinieye")) key = "infinieye™";
@@ -161,8 +165,41 @@ public final class NpcPrices {
     }
 
     private static boolean priceable(String item) {
-        return item != null && (FARMING_KEYS.contains(key(item))
-                || BossDrops.isSlayerDropName(item));
+        return item != null && (FARMING_KEYS.contains(key(item)) || FARMING_DEFAULTS.containsKey(key(item))
+                || tracked.contains(key(item)) || BossDrops.isSlayerDropName(item));
+    }
+
+    /** Lets a tracker's drop take a price. */
+    public static void track(String item) {
+        if (validName(item)) tracked.add(key(item));
+    }
+
+    public static String coins(long amount) {
+        if (amount < 0) return "-" + coins(-amount);
+        if (amount >= 1_000_000_000L) return String.format(Locale.ROOT, "%.1fb", amount / 1_000_000_000.0);
+        if (amount >= 1_000_000L) return String.format(Locale.ROOT, "%.1fm", amount / 1_000_000.0);
+        if (amount >= 1_000L) return String.format(Locale.ROOT, "%.1fk", amount / 1_000.0);
+        return String.valueOf(amount);
+    }
+
+    /** The cost spelled out for chat, where there is room to show what a profit was measured against. */
+    public static String spentLine(String costItem, long count) {
+        long each = price(costItem);
+        return "  §7Spent §f" + coins(each * count) + " §8(" + String.format(Locale.ROOT, "%,d", count) + " × " + coins(each) + ")";
+    }
+
+    /** What these drops come to, less what was spent. */
+    public record Takings(long profit, boolean unpriced) { }
+
+    public static Takings takings(Map<String, Integer> drops, String costItem, long spent) {
+        long earned = 0;
+        boolean unpriced = false;
+        for (Map.Entry<String, Integer> drop : drops.entrySet()) {
+            if (drop.getValue() <= 0) continue;
+            if (priceInfo(drop.getKey()) == null) unpriced = true;
+            earned += value(drop.getKey(), drop.getValue());
+        }
+        return new Takings(earned - price(costItem) * spent, unpriced);
     }
 
     public static Price priceInfo(String item) {
@@ -252,7 +289,9 @@ public final class NpcPrices {
         Matcher m = SOLD.matcher(Zealots.strip(raw).trim());
         if (!m.matches()) return null;
         String item = m.group(2).trim();
-        if (!validName(item) || ambiguousPet(item) || !priceable(item)) return null;
+        // Any item, not just what a list holds yet: a sale made before a tracker first saw the
+        // drop should already be the price when it does, on every list that shows it.
+        if (!validName(item) || ambiguousPet(item)) return null;
         item = canonicalName(item);
         try {
             int count = Integer.parseInt(m.group(1).replace(",", ""));
@@ -351,7 +390,9 @@ public final class NpcPrices {
                 long candidate = entry.get("candidate").getAsLong();
                 int matches = entry.get("matches").getAsInt();
                 long confirmed = entry.get("confirmed").getAsLong();
-                if (!validName(name) || ambiguousPet(name) || !priceable(name)
+                // No check against the lists here: they fill in after this, and one name they
+                // do not hold yet would throw away every sale in the file.
+                if (!validName(name) || ambiguousPet(name)
                         || candidate < 1 || candidate > MAX_PRICE
                         || matches < 1 || matches > 2 || confirmed < 0 || confirmed > MAX_PRICE) return;
                 // Older files held the first sale, including a changed price, as a candidate.

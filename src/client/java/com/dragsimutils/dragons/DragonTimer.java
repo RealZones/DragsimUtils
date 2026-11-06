@@ -353,8 +353,8 @@ public final class DragonTimer {
      * True when this line is a person talking, not the server announcing.
      *
      * Player chat arrives through the SAME event as server announcements - on this
-     * server "[MVP+] leafonwild: fear" is a system message - so without this, someone
-     * typing an announcement's wording sets the parser off. Checked against every log:
+     * server "[MVP+] SomePlayer: hi" is a system message - so without this, someone
+     * typing an announcement's wording sets the parser off. Checked against chat logs:
      * 1437 player lines ignored, 823 announcements kept, none wrongly blocked.
      */
     public static boolean isPlayerChat(String line) {
@@ -384,7 +384,7 @@ public final class DragonTimer {
     }
 
     private static String plain(Component c) {
-        return c == null ? "" : c.getString().replaceAll("§[0-9A-Fa-fK-Ok-orRxX]", "");
+        return c == null ? "" : com.dragsimutils.zealots.Zealots.strip(c.getString());
     }
 
     private static int parse(String s, int fallback) {

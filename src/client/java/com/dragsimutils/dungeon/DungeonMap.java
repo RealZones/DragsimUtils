@@ -34,12 +34,11 @@ import java.util.Map;
 /** Shows the server's live dungeon map without the held item's parchment and hands. */
 public final class DungeonMap {
     private static final String ID = "dungeon.map";
-    // The map sits in a 2px black frame over a see-through dark fill, the look Fear
-    // picked: the server's map leaves the space between rooms transparent, so the fill
+    // The map sits in a 2px black frame over a see-through dark fill: the server's map leaves the space between rooms transparent, so the fill
     // is what those gaps show, with the world faintly behind it. No caption above: a
     // header saying "map" costs 12px and tells the reader nothing the picture does not.
     private static final int SIZE = 128, BORDER = 2, PAD = 2, INSET = BORDER + PAD, OUTER = SIZE + 2 * INSET;
-    // Markers are always shown and always glide: Fear found switches for either useless.
+    // Markers are always shown and always glide: a switch for either changed nothing useful.
     private static boolean enabled = true, names, heads = true;
     /** Set once the boss speaks; the map is no help in the arena, so it stays hidden till the run ends. */
     private static boolean boss;

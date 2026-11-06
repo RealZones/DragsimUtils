@@ -99,7 +99,7 @@ public final class QuizChecks {
         java.util.List<String> opts = java.util.List.of("Maxor", "Storm", "Goldor");
         String q2 = "2/3 Who guards the Blood Room?";
         check(e.deduce(q2, opts) == null, "no answer and no exclusions means no guess");
-        check(e.exclude(q2, "Maxor"), "a wrong answer is recorded");
+        check(e.exclude(q2, "Maxor"), "a wrong answer is real");
         check(!e.exclude(q2, "Maxor"), "the same wrong answer twice is not news");
         check(e.deduce(q2, opts) == null, "two options left is still a guess, so stay quiet");
         e.exclude(q2, "Goldor");

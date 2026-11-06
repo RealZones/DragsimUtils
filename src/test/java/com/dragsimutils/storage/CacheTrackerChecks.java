@@ -7,7 +7,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 
-/** Private Cache result blocks from the recording, with neighboring unrelated sources. */
+/** Private Cache result blocks, with neighboring unrelated sources. */
 public final class CacheTrackerChecks {
     private static int checks;
     private static final String PLACED = "§5☠ §dYou set down a Crypt Cache. §7It opens in 5 seconds.";

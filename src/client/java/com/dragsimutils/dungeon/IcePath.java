@@ -26,7 +26,7 @@ import java.util.Set;
 /**
  * "Ice Path": hit the silverfish so it slides into the chest at the far end.
  *
- * The room, from a recording of a real one: a flat sheet of packed ice, a scatter of
+ * The room: a flat sheet of packed ice, a scatter of
  * polished andesite standing on it that the fish stops against, and a single chest at
  * the sheet's far edge, halfway along - the "opening" the hint means.
  *
@@ -36,8 +36,8 @@ import java.util.Set;
  *
  * The search lives in {@link IcePathLogic}; this half only finds those three things and
  * draws every slide. Finding the chest rather than assuming a corner matters: the
- * sheet is laid out differently in each room, and the two earlier recordings were
- * clipped at the radius, so a guessed "back middle" would have aimed at open ice.
+ * sheet is laid out differently in each room, so a guessed "back middle" would aim at
+ * open ice.
  */
 public final class IcePath {
     private static final String ID = "dungeon.icePath";
@@ -176,7 +176,7 @@ public final class IcePath {
         }
         if (chest == null || ice.isEmpty()) { goalBlock = null; return null; }
 
-        // The recorded chest approach has stone floor between patches of ice. Include
+        // The chest approach has stone floor between patches of ice. Include
         // its local supported cells; scanning stone throughout the room would let the
         // search leave the puzzle and route through the surrounding walkways.
         for (BlockPos pos : BlockPos.betweenClosed(chest.offset(-3, -1, -3), chest.offset(3, -1, 3))) {

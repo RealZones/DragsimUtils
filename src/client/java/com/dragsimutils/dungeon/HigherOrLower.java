@@ -29,9 +29,7 @@ import java.util.UUID;
 /**
  * "Higher Or Lower": kill the blazes in order of health. The chest shows which way.
  *
- * Everything here was read off a recording of the room rather than guessed, after two
- * rounds of guessing block ids from screenshots cost an evening on the Tic Tac Toe
- * board. What the recording showed:
+ * Everything here was read off the room itself rather than guessed:
  *
  *   blaze         -1 +8 +4    [Lv100] Blaze 225000/225000❤
  *   text_display  -6 +17 -7   Higher Or Lower

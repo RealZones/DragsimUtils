@@ -123,7 +123,7 @@ public final class BossDropsBoundaryChecks {
     }
 
     /**
-     * The recorded T5 entity is Riftborn Seraph. Its guaranteed atoms arrive in the
+     * The real T5 entity is Riftborn Seraph. Its guaranteed atoms arrive in the
      * bag, with no drop line. These are measured fixture deltas, not payout constants.
      */
     private static void t5Atoms() throws Exception {

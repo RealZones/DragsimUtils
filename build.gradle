@@ -181,6 +181,12 @@ tasks.register('lootRollChecks', JavaExec) {
 	mainClass = 'com.dragsimutils.qol.LootRollChecks'
 }
 
+tasks.register('debugMessageChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.qol.DebugMessageChecks'
+}
+
 tasks.register('zealotTrackerChecks', JavaExec) {
 	dependsOn 'testClasses', 'clientClasses'
 	classpath = sourceSets.test.runtimeClasspath
@@ -192,9 +198,20 @@ tasks.register('storageOverviewChecks', JavaExec) {
 	classpath = sourceSets.test.runtimeClasspath
 	mainClass = 'com.dragsimutils.storage.StorageOverviewChecks'
 }
+tasks.register('liveStorageChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.storage.LiveStorageChecks'
+}
+tasks.named('check') { dependsOn 'liveStorageChecks' }
+tasks.register('goopFightChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.goop.GoopFightChecks'
+}
 
 tasks.named('check') {
-	dependsOn 'storageOverviewChecks', 'lootRollChecks', 'zealotTrackerChecks'
+	dependsOn 'storageOverviewChecks', 'lootRollChecks', 'zealotTrackerChecks', 'debugMessageChecks', 'goopFightChecks'
 }
 
 tasks.register('protectorChecks', JavaExec) {
@@ -433,6 +450,19 @@ tasks.register('legacyConfigMigrationChecks', JavaExec) {
     mainClass = 'com.dragsimutils.LegacyConfigMigrationChecks'
 }
 tasks.named('check') { dependsOn 'legacyConfigMigrationChecks' }
+tasks.register('performanceChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.ui.PerformanceChecks'
+    systemProperty 'dragsimutils.performanceBenchmark', providers.gradleProperty('performanceBenchmark').isPresent()
+}
+tasks.named('check') { dependsOn 'performanceChecks' }
+tasks.register('goopBaitReminderChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.qol.GoopBaitReminderChecks'
+}
+tasks.named('check') { dependsOn 'goopBaitReminderChecks' }
 
 tasks.register('networkSafetyChecks', JavaExec) {
     dependsOn 'testClasses', 'clientClasses'

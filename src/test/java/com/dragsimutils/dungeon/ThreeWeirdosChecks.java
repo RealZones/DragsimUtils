@@ -29,7 +29,7 @@ public final class ThreeWeirdosChecks {
         ThreeWeirdosLogic model = observed();
         model.accept(OBSERVED[1]);
         check(model.answered() == 3 && "Ferris".equals(model.solution()), "repeated dialogue is not an extra speaker or constraint");
-        check(!model.accept("[DRAGON] WesternIvey: PUZZLE FAIL! The machine won Tic Tac Toe"), "player-pasted failure is not a room event");
+        check(!model.accept("[DRAGON] PlayerSeven: PUZZLE FAIL! The machine won Tic Tac Toe"), "player-pasted failure is not a room event");
         check("Ferris".equals(model.solution()), "player paste does not erase answer");
         check(!model.accept("[VIP] Example: " + OBSERVED[0]), "player-pasted NPC clue is rejected");
         model.accept("You picked Ferris's chest. Correct!");

@@ -88,7 +88,7 @@ public final class EquipmentHudChecks {
         check(EquipmentHud.equipped(null) == null, "null is not an equip");
 
         EquipmentHud.Pet activated = EquipmentHud.activated("§aActivated §7[Lvl 200] §6Golden Dragon§a!");
-        check(golden.equals(activated), "recorded Activated line immediately selects the new pet with its rarity");
+        check(golden.equals(activated), "real Activated line immediately selects the new pet with its rarity");
         check(EquipmentHud.activated("Activated [Lvl 100] Bal").name().equals("Bal"),
                 "activation announcement without exclamation mark");
         check(EquipmentHud.activated("Player: Activated [Lvl 200] Golden Dragon!") == null,

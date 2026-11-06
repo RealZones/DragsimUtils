@@ -3,7 +3,7 @@ package com.dragsimutils.qol;
 import com.dragsimutils.zealots.Zealots;
 import java.util.List;
 
-/** Boss lines transcribed from the supplied screenshot, plus player/loot boundaries. */
+/** Boss lines as the server prints them, plus player/loot boundaries. */
 public final class AbilitySpamChecks {
     public static void main(String[] args) {
         List<String> boss = List.of(

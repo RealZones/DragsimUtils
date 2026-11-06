@@ -55,7 +55,7 @@ public final class SlayerSpawnMarker {
 
     /**
      * The marker's colours come from the theme accent, read each frame. They were a fixed
-     * neon pink; Fear asked for them to follow the theme he has set, like every other
+     * neon pink; now they follow the theme, like every other
      * world overlay in the mod. The light and deep shades are the accent mixed toward white
      * and black, so any palette keeps the same lit edges and shaded faces.
      */
@@ -257,8 +257,8 @@ public final class SlayerSpawnMarker {
      * cap, a long thin shaft, a flat shoulder and a small cone ending in a sharp point.
      *
      * Clean and sharp on purpose. The version before had a domed cap, bevels and a rounded
-     * tip on a head three and a half times the shaft's width - Fear's word was that the tip
-     * was way too big for the long part. The head is now under three times the shaft and
+     * tip on a head three and a half times the shaft's width, far too big for the long part.
+     * The head is now under three times the shaft and
      * about half its length. Its tip stays clear of the timer just above the ring, even at
      * the bottom of its bob.
      */
@@ -266,7 +266,7 @@ public final class SlayerSpawnMarker {
             {1.35, 0.000}, {1.35, 0.070}, {0.80, 0.070}, {0.80, 0.190}, {0.50, 0.000}};
     /**
      * The timer's height: just above the ring, under the arrow's tip. It was at neck height
-     * (1.55) and before that 2.17; Fear wanted it lower, where you are already looking when
+     * (1.55) and before that 2.17; it sits lower now, where you are already looking when
      * you watch the ring, so it is easier to read.
      */
     private static final double TIMER_Y = 0.22;
@@ -355,7 +355,7 @@ public final class SlayerSpawnMarker {
         java.util.function.DoubleFunction<Integer> sweep = a ->
                 Draw.lerp(neon, partner, (float) (0.5 + 0.5 * Math.cos(a - spin)));
         // The glowing neon line ring. A flat band lying on the ground was tried after it and
-        // Fear put the two side by side in game: this one was "10x better".
+        // side by side in game this one read far better.
         // Glow spilling onto the ground inside the ring, brightest at the tube and fading in.
         Gizmos.circle(base, 0.83f, GizmoStyle.fill(tint(neon, 16, fade)));
         ring(base.add(0, 0.003, 0), 0.76, 0, Math.PI * 2, tint(neon, 46, fade), 5f);

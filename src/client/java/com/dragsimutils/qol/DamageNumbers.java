@@ -174,7 +174,7 @@ public final class DamageNumbers {
      * The two ways a server can float text over a mob.
      *
      * A text_display is the modern one and an armour stand wearing a name is the old
-     * one, and which of them this server uses has never been caught in a dump - a popup
+     * one, and which of them this server uses has never been pinned down - a popup
      * is gone long before the button can be pressed. So both are handled. The
      * name-visible test on the armour stand is what keeps the pets out; they carry a
      * name they never show.

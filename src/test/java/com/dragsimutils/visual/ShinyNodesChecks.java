@@ -17,7 +17,7 @@ public final class ShinyNodesChecks {
         node(10.37, 65.25, -4.82, 10, 64, -5, Direction.UP);
         if (ShinyNodes.candidate(10.33, 64.41, -4.59) != null) throw new AssertionError("unrelated particle mapped to a node");
         checks++;
-        // Captured from the two screenshot locations: the server places the burst
+        // Two real nodes: the server places the burst
         // above sandstone/black concrete, which the resource pack retextures.
         burst(-544.5, 2.1, -250.5, -545, 1, -251);
         burst(-566.5, 40.1, -209.5, -567, 39, -210);

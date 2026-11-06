@@ -25,11 +25,11 @@ public final class TerminalLogic {
 
     private static final Pattern STARTS = Pattern.compile("^What starts with: '([A-Za-z0-9_])'\\?$", Pattern.CASE_INSENSITIVE);
     private static final Pattern COLORS = Pattern.compile("^Select all the ([A-Za-z ]+) items!$", Pattern.CASE_INSENSITIVE);
-    // Dragsim's fourth colour is lime, not Hypixel's green: the 2026-10-23 Floor VII recording
+    // Dragsim's fourth colour is lime, not Hypixel's green: a Floor VII board
     // had yellow/blue/orange, orange/blue/yellow, lime/orange/red, and with only "green" in the
     // cycle the lime pane read as unknown, so the terminal sat at "Waiting for all nine colors"
     // until it was closed. Both names mean the same step; the order is Hypixel's (left click
-    // moves forward), not yet checked against a recorded click on Dragsim.
+    // moves forward), not yet checked against a real click on Dragsim.
     private static final List<String> CYCLE = List.of("red", "orange", "yellow", "lime", "blue");
     private static final List<Integer> RUBIX_SLOTS = List.of(12, 13, 14, 21, 22, 23, 30, 31, 32);
     // Noamm's exception is default item glint components plus Golden Apple. These
@@ -183,17 +183,16 @@ public final class TerminalLogic {
 
     private static Plan melody(Map<Integer, Cell> board) {
         // Dragsim marks the target column twice: a magenta pane in the top row and another in
-        // the bottom row (slots 4 and 40 in the 2026-10-23 Floor VII recording). This wanted
-        // exactly one magenta pane, so it sat at "Waiting for unique markers" for the whole of
-        // both Melody terminals in that run and never said when to click. A marker now counts
+        // the bottom row (slots 4 and 40). This wanted
+        // exactly one magenta pane, so it sat at "Waiting for unique markers" for the whole
+        // terminal and never said when to click. A marker now counts
         // only outside the three tracks, and every marker must name the same column.
         List<Cell> targets = board.values().stream().filter(cell -> id(cell).equals("magenta_stained_glass_pane")).toList();
         // The live track is the one with red panes in it, and its mover is the one lime pane
         // among them. A finished track turns all lime and a waiting one is white. This used to
         // count every lime pane in the three tracks, so the moment the first track finished it
         // saw six movers and went to "Waiting for unique markers" for the rest of the terminal;
-        // with wrong-click blocking on, every click after the first was then refused. Both
-        // Melody terminals in the 2026-10-23 22:35 recording stopped there.
+        // with wrong-click blocking on, every click after the first was then refused.
         List<Cell> movers = new ArrayList<>();
         int live = 0;
         for (int row = 1; row <= 3; row++) {
@@ -254,6 +253,6 @@ public final class TerminalLogic {
     }
     private static Plan empty(Type type, String status) { return new Plan(type, List.of(), status, false); }
     private static String plain(String raw) {
-        return raw == null ? "" : raw.replaceAll("§[0-9A-Fa-fK-Ok-orRxX]", "").replace('\u2018', '\'').replace('\u2019', '\'').trim();
+        return raw == null ? "" : com.dragsimutils.zealots.Zealots.strip(raw).replace('\u2018', '\'').replace('\u2019', '\'').trim();
     }
 }

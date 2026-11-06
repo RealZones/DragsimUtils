@@ -72,7 +72,7 @@ public final class RevenantSpawnTiles {
 
     public static Module module() {
         return new Module("slayer.revenantTiles", "Revenant Spawn Tiles",
-                "Block ESP for repeated Revenant spawn tiles in the Crypts.", "Visual",
+                "Highlights repeated Revenant spawn tiles in the Crypts.", "Visual",
                 () -> enabled, v -> enabled = v,
                 List.of(new Setting.Slider("Show within", "Distance for nearby observed tiles.",
                                 12, 64, 4, () -> range, v -> range = v, "blocks"),

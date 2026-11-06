@@ -7,9 +7,20 @@ import java.util.Locale;
 /** Search the words a person sees, including values that are otherwise hidden in a closed module. */
 final class SettingsSearch {
     private SettingsSearch() { }
+    private static final java.util.regex.Pattern SPACES = java.util.regex.Pattern.compile("\\s+");
 
     static String normalize(String query) {
-        return query == null ? "" : query.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+        if (query == null || query.isEmpty()) return "";
+        String normalized = query.strip().toLowerCase(Locale.ROOT);
+        // Ordinary searches contain no whitespace runs. They are normalized during
+        // layout and hit testing for every setting, so avoid a matcher on that path.
+        for (int i = 0; i < normalized.length(); i++) {
+            char c = normalized.charAt(i);
+            if (c == '\t' || c == '\n' || c == '\u000B' || c == '\f' || c == '\r'
+                    || c == ' ' && i > 0 && normalized.charAt(i - 1) == ' ')
+                return SPACES.matcher(normalized).replaceAll(" ");
+        }
+        return normalized;
     }
 
     static boolean matches(String query, String text) {
@@ -26,6 +37,8 @@ final class SettingsSearch {
             case Setting.Action action -> action.button();
             case Setting.KeyAction action -> action.button();
             case Setting.Command command -> command.command();
+            case Setting.Binds binds -> binds.binds().get().stream().map(bind -> bind.name() + " " + bind.where() + " " + bind.group())
+                    .collect(java.util.stream.Collectors.joining(" "));
             default -> "";
         };
         return setting.label() + " " + setting.description() + " " + extra;

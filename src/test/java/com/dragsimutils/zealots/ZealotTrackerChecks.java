@@ -32,7 +32,7 @@ public final class ZealotTrackerChecks {
         eq(count("golden"), 1, "golden-eye behavior changed");
         eq(count("catalysts"), 1, "debug companions counted a catalyst twice");
         line.invoke(null, "[DRAGON] IMainDragSim: EPIC DROP! Warden Catalyst");
-        line.invoke(null, "[VIP+] JohnTanking: EPIC DROP! Warden Catalyst");
+        line.invoke(null, "[VIP+] PlayerFour: EPIC DROP! Warden Catalyst");
         line.invoke(null, "base 20.00000000% → effective 20.00000000% [0.00000000, 20.00000000) Warden Catalyst");
         line.invoke(null, "loot number: 73.80309");
         line.invoke(null, "result: nothing");
@@ -57,7 +57,7 @@ public final class ZealotTrackerChecks {
         yes(!ZealotTracker.missingPrices(new int[]{3, 2, 0, 0}), "zero unpriced drops made profit incomplete");
         yes(ZealotTracker.missingPrices(new int[]{0, 0, 1, 0}), "unpriced Summoning Eyes were silently valued");
         yes(ZealotTracker.missingPrices(new int[]{0, 0, 0, 1}), "unpriced Catalysts were silently valued");
-        // The same sale/custom provider feeds the HUD after counts were already recorded.
+        // The same sale/custom provider feeds the HUD after counts were already real.
         Field overrides = NpcPrices.class.getDeclaredField("custom");
         overrides.setAccessible(true);
         @SuppressWarnings("unchecked") var custom = (java.util.Map<String, Long>) overrides.get(null);
@@ -92,17 +92,17 @@ public final class ZealotTrackerChecks {
         eq(count("golden"), 1, "Golden Eye payout stopped being counted");
         eq(count("eyes"), 1, "Summoning Eye payout stopped being counted");
 
-        // Exact successful personal roll from 2026-10-04-2.log.gz:1873. Another
-        // player pasted a matching roll on October 12; an anchored parser rejects it.
+        // An exact successful personal roll. Another player pasting the same line
+        // into chat must not count; an anchored parser rejects it.
         Method spawn = ZealotTracker.class.getDeclaredMethod("recordSpecialSpawn", String.class, long.class);
         spawn.setAccessible(true);
         String personalSpawn = "§a▶ §7rare roll §fSpecial Zealot §8(1 in 383, 0.26139%) §7rolled §f0.13772 §aHIT";
-        yes((boolean) spawn.invoke(null, personalSpawn, 1_000L), "recorded personal Special spawn was not recognized");
+        yes((boolean) spawn.invoke(null, personalSpawn, 1_000L), "real personal Special spawn was not recognized");
         eq(count("sinceSpecial"), 0, "personal spawn did not reset the streak");
         ZealotTracker.recordKill(false);
         yes((boolean) spawn.invoke(null, personalSpawn, 1_100L), "duplicate personal signal was not consumed");
         eq(count("sinceSpecial"), 1, "duplicate spawn signal erased a later ordinary kill");
-        yes(!(boolean) spawn.invoke(null, "[MVP] Spirings: ▶ rare roll Special Zealot (1 in 383, 0.26139%) rolled 0.13772 HIT", 1_200L),
+        yes(!(boolean) spawn.invoke(null, "[MVP] PlayerFive: ▶ rare roll Special Zealot (1 in 383, 0.26139%) rolled 0.13772 HIT", 1_200L),
                 "another player's pasted spawn reset the streak");
         yes(!(boolean) spawn.invoke(null, "rare roll Special Zealot (1 in 383, 0.26139%) rolled 3.13772 MISS", 1_200L),
                 "a missed spawn roll reset the streak");
@@ -128,15 +128,58 @@ public final class ZealotTrackerChecks {
         line.invoke(null, "RARE DROP! (Summoning Eye)");
         ZealotTracker.recordKill(true);
         eq(count("sinceSpecial"), 1, "later Special death or eye payout reset the spawn streak");
+        // The configurable /debug format observed by LootRoll also carries the
+        // personal spawn outcome; it must work with MF/PL hidden or reordered.
+        line.invoke(null, "[Debug] Zealot · Roll 0.1/100 · MF 408.06802 · PL 66.12 · Special Zealot HIT · Chance 0.23371%");
+        eq(count("sinceSpecial"), 0, "configurable debug HIT did not reset the streak");
         ZealotTracker.recordKill(false);
+        line.invoke(null, "[Debug] Zealot · Roll 64.78413/100 · MF 408.06802 · PL 66.12 · Special Zealot miss · Chance 0.23371%");
+        line.invoke(null, "[Debug] Zealot · Roll 0.1/100 · Summoning Eye HIT · Chance 17%");
+        line.invoke(null, "[VIP+] Someone: [Debug] Zealot · Roll 0.1/100 · Special Zealot HIT · Chance 0.23371%");
+        line.invoke(null, "[Debug] Zealot · Table 0.1/100 · Special Zealot HIT · Chance 0.23371%");
+        eq(count("sinceSpecial"), 1, "miss, other drop, pasted HIT or table reset the streak");
+        String minimalSpawn = "[Debug] Zealot · Roll 0.15/100 · Special Zealot hit";
+        yes((boolean) spawn.invoke(null, minimalSpawn, 10_000L), "debug HIT without optional fields was ignored");
+        eq(count("sinceSpecial"), 0, "minimal debug HIT did not reset the streak");
+        ZealotTracker.recordKill(false);
+        spawn.invoke(null, minimalSpawn, 10_100L);
+        eq(count("sinceSpecial"), 1, "duplicate debug HIT erased a later normal kill");
+        line.invoke(null, "[Debug] Zealot · Roll 0.2/100 · PL 66.12 · MF 408.06802 · Special Zealot hit · Chance 0.23371%");
+        eq(count("sinceSpecial"), 0, "reordered optional debug fields hid a successful spawn");
+        ZealotTracker.recordKill(false);
+        // The source field off, as on the server's default line.
+        yes((boolean) spawn.invoke(null, "[Debug] Roll 0.000695/100 · Special Zealot HIT · Chance 0.247293% · 1 item odds (hover)", 30_000L),
+                "debug HIT without its source was ignored");
+        eq(count("sinceSpecial"), 0, "debug HIT without its source did not reset the streak");
         reset.invoke(null);
         eq(count("sinceSpecial"), 0, "dry streak survived session reset");
+
+        ZealotTracker.recordKill(false);
+        yes(ZealotTracker.recordSpecialTitle("§5Special Zealot", false, 20_000L), "personal title was ignored without debug");
+        eq(count("sinceSpecial"), 0, "personal title did not reset dry streak");
+        ZealotTracker.recordKill(false);
+        yes(ZealotTracker.recordSpecialTitle("§aA Special Zealot has spawned nearby!", true, 20_050L), "spawn subtitle was ignored");
+        eq(count("sinceSpecial"), 1, "title's companion subtitle erased a later kill");
+        spawn.invoke(null, "[Debug] Zealot · Roll 0.12/100 · Special Zealot hit", 20_100L);
+        eq(count("sinceSpecial"), 1, "popup's companion debug roll erased a later kill");
+        spawn.invoke(null, "[Debug] Zealot · Roll 0.13/100 · Special Zealot hit", 20_200L);
+        eq(count("sinceSpecial"), 0, "second distinct personal spawn was mistaken for a duplicate");
+        ZealotTracker.recordKill(false);
+        ZealotTracker.recordSpecialTitle("SPECIAL ZEALOT!", false, 20_250L);
+        eq(count("sinceSpecial"), 1, "debug's companion title erased a later kill");
+        yes(!ZealotTracker.recordSpecialTitle("Someone: Special Zealot", false, 20_300L), "player-like popup text reset the streak");
+        yes(!ZealotTracker.recordSpecialTitle("Special Zealot 0.42% chance", false, 20_300L), "unrelated Special text reset the streak");
+        yes(!ZealotTracker.recordSpecialTitle("Golden Eye", false, 20_300L), "drop title reset spawn streak");
+        eq(count("sinceSpecial"), 1, "unrelated popup changed the streak");
+        ZealotTracker.recordSpecialTitle("A Special Zealot has spawned nearby!", true, 22_000L);
+        eq(count("sinceSpecial"), 0, "subtitle-only popup did not work without debug");
+        reset.invoke(null);
 
         // Real drop lines from the October logs: only personal announcements count.
         line.invoke(null, "RNGESUS DROP! [Lvl 1] Enderman");
         line.invoke(null, "EPIC DROP! Spicy Wart");
-        eq(count("endermanPets"), 1, "recorded Enderman pet announcement was lost");
-        eq(count("spicyWarts"), 1, "recorded Spicy Wart announcement was lost");
+        eq(count("endermanPets"), 1, "real Enderman pet announcement was lost");
+        eq(count("spicyWarts"), 1, "real Spicy Wart announcement was lost");
         line.invoke(null, "loot number: 0.091 → [Lvl 1] Enderman");
         line.invoke(null, "▍ Zealot 0.091 → [Lvl 1] Enderman · Special Zealot 94.32");
         line.invoke(null, "▍ Zealot 1.55 → Spicy Wart");

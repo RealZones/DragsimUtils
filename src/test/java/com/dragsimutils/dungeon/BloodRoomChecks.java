@@ -4,7 +4,7 @@ public final class BloodRoomChecks {
     private static int checks;
 
     public static void main(String[] args) {
-        // -- the real script, line for line, as the logs recorded it ------------
+        // -- the real script, line for line, as the server sends it ------------
         check(BloodRoomLogic.door("§cThe §4§lBLOOD DOOR §chas been opened!"),
                 "the door line is recognised through its colour codes");
         check(!BloodRoomLogic.door("[BOSS] The Watcher: Ah, you've finally arrived."),
@@ -33,7 +33,7 @@ public final class BloodRoomChecks {
         // -- the estimate learns -----------------------------------------------
         BloodRoomLogic.forget();
         check(BloodRoomLogic.expected() == BloodRoomLogic.DEFAULT_DELAY_MS,
-                "with nothing measured it uses the one recorded run");
+                "with nothing measured it uses the one real run");
         check(BloodRoomLogic.samples() == 0, "and admits it has no samples");
 
         BloodRoomLogic.measured(10_000);

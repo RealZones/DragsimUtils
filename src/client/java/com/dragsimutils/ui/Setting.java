@@ -140,6 +140,26 @@ public sealed interface Setting {
     record KeyAction(String id, String label, String description, String button, Runnable run) implements Setting {
     }
 
+    /**
+     * Every key in the mod on one page. A listing of keys that belong to other settings, so
+     * it holds no values of its own and fires nothing; each key still works from where it lives.
+     */
+    record Binds(String label, Supplier<List<Bind>> binds) implements Setting {
+        @Override
+        public String description() {
+            return "";
+        }
+    }
+
+    /**
+     * One key on that page.
+     *
+     * @param where the page it belongs to, or "" when that would only repeat the name
+     * @param group the sidebar category it is listed under
+     */
+    record Bind(String id, String name, String where, String group) {
+    }
+
     /** Not a control - a heading that breaks a long page into groups. */
     record Section(String label) implements Setting {
         @Override

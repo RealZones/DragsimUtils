@@ -32,6 +32,7 @@ final class MenuIcons {
             case "Chat" -> 7;
             case "General", "Quality of Life" -> 8;
             case "Edit HUD" -> 9;
+            case "Keybinds" -> 22;
             case "Appearance" -> 10;
             case "Tools" -> 12;
             case "Visual" -> 14;

@@ -67,8 +67,8 @@ public final class Quiz {
      * The question sign changes the instant an answer lands; the three answer signs are
      * rewritten a moment later, and the letters move between questions. Reading them on
      * the first tick of a new question printed "2/3 - B Goldor" while the room was still
-     * showing the last question's letters, and Goldor ended up at C (log, 2026-10-14
-     * 15:30:57: the hint landed in the same second as "answered correctly!"). So nothing
+     * showing the last question's letters, and Goldor ended up at C (the hint landed in
+     * the same second as "answered correctly!"). So nothing
      * is said or marked until the signs have held still for this long.
      */
     private static final int SETTLE_TICKS = 15;
@@ -255,9 +255,12 @@ public final class Quiz {
         Entity best = null;
         double nearest = 20 * 20;
         for (Entity entity : mc.level.entitiesForRendering()) {
-            if (entity instanceof Player || !bare.equals(QuizLogic.option(plain(label(entity))))) continue;
+            if (entity instanceof Player) continue;
             double distance = entity.distanceToSqr(mc.player);
-            if (distance < nearest) { nearest = distance; best = entity; }
+            if (distance < nearest && bare.equals(QuizLogic.option(plain(label(entity))))) {
+                nearest = distance;
+                best = entity;
+            }
         }
         return best;
     }
@@ -366,7 +369,7 @@ public final class Quiz {
     /**
      * Where to point: the one button to press, on the front of the answer's pillar.
      *
-     * A recording of the room shows three option labels, each one block above the
+     * The room has three option labels, each one block above the
      * centre of a pillar with a button on all four sides - press any of them. Marking
      * all four lit the side faces too and read as clutter, so only the front one is
      * marked and the tracer ends on it rather than on the sign above. The front comes

@@ -1,6 +1,7 @@
 package com.dragsimutils;
 
 import com.dragsimutils.dragons.BossDrops;
+import com.dragsimutils.dragons.DragonHitboxes;
 import com.dragsimutils.dragons.DragonTimer;
 import com.dragsimutils.dragons.Protector;
 import com.dragsimutils.dungeon.DungeonContext;
@@ -23,6 +24,7 @@ import com.dragsimutils.hud.ServerStats;
 import com.dragsimutils.qol.AbilitySpam;
 import com.dragsimutils.qol.CommandBinds;
 import com.dragsimutils.qol.DamageNumbers;
+import com.dragsimutils.qol.DebugMessage;
 import com.dragsimutils.qol.Drops;
 import com.dragsimutils.qol.GlobalChat;
 import com.dragsimutils.qol.CopyChat;
@@ -48,6 +50,7 @@ import com.dragsimutils.storage.SnapshotStore;
 import com.dragsimutils.storage.ForgeRecipes;
 import com.dragsimutils.storage.MiningSession;
 import com.dragsimutils.storage.CacheTracker;
+import com.dragsimutils.goop.GoopTracker;
 import com.dragsimutils.storage.VoidFragments;
 import com.dragsimutils.storage.Pets;
 import com.dragsimutils.storage.PowderTracker;
@@ -104,10 +107,26 @@ public class DragsimUtilsClient implements ClientModInitializer {
             "key.dragsimutils.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT,
             KeyMapping.Category.register(Identifier.fromNamespaceAndPath("dragsimutils", "dragsimutils"))));
 
+    private static int openKey() {
+        if (OPEN.isUnbound()) return Keybinds.NONE;
+        InputConstants.Key key = KeyMappingHelper.getBoundKeyOf(OPEN);
+        return key.getType() == InputConstants.Type.MOUSE ? Keybinds.mouse(key.getValue()) : key.getValue();
+    }
+
+    /** Through the game's options, so the choice is saved and Controls shows the same key. */
+    private static void openKey(int key) {
+        OPEN.setKey(key == Keybinds.NONE ? OPEN.getDefaultKey()
+                : Keybinds.isMouse(key) ? InputConstants.Type.MOUSE.getOrCreate(Keybinds.mouseButton(key))
+                : InputConstants.Type.KEYSYM.getOrCreate(key));
+        KeyMapping.resetMapping();
+        Minecraft.getInstance().options.save();
+    }
+
     private static ModuleRegistry registry;
     private boolean keyWasDown = false;
     /** Which bound keys were down last tick, so a held key fires once. */
     private final java.util.Set<Integer> heldBinds = new java.util.HashSet<>();
+    private final java.util.Set<Integer> downBinds = new java.util.HashSet<>();
 
     /** Built once so a toggle survives closing and reopening the screen. */
     public static ModuleRegistry registry() {
@@ -116,6 +135,7 @@ public class DragsimUtilsClient implements ClientModInitializer {
             registry.replace(StoragePreview.module());
             registry.replace(VoidgloomHelper.module());
             registry.replace(DragonTimer.module());
+            registry.replace(DragonHitboxes.module());
             registry.replace(Protector.module());
             registry.replace(BossDrops.module());
             registry.replace(BossDrops.slayerProfitModule());
@@ -125,6 +145,8 @@ public class DragsimUtilsClient implements ClientModInitializer {
             registry.replace(RevenantSpawnTiles.module());
             registry.replace(ZealotTracker.module());
             registry.insertBefore("dragon.timer", CacheTracker.module());
+            registry.insertBefore("dragon.timer", GoopTracker.timerModule());
+            registry.insertBefore("dragon.timer", GoopTracker.module());
             registry.replace(DungeonMap.module());
             registry.replace(ThreeWeirdos.module());
             registry.replace(TicTacToe.module());
@@ -169,8 +191,9 @@ public class DragsimUtilsClient implements ClientModInitializer {
             // grouped pages change only what the browser shows, not how the features run.
             registry.insertBefore("qol.lootfilter", LootChat.module());
             registry.hide("qol.lootfilter").hide("qol.lootroll");
+            registry.add(com.dragsimutils.visual.Perspective.module());
             registry.insertBefore("visual.fullbright", VisualTweaks.module());
-            registry.hide("visual.fullbright").hide("visual.inventoryGlass")
+            registry.hide("visual.fullbright").hide("visual.inventoryGlass").hide("visual.perspective")
                     .hide("visual.explosionParticles").hide("visual.shinyNodes");
             com.dragsimutils.ui.FeatureCatalog.publicLayout(registry);
             Config.load(registry);
@@ -181,6 +204,7 @@ public class DragsimUtilsClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         LegacyConfigMigration.importSettings(net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir());
+        Keybinds.openMenuKey(DragsimUtilsClient::openKey, DragsimUtilsClient::openKey);
         ClientTickEvents.END_CLIENT_TICK.register(this::onTick);
         Drops.init();
         DungeonContext.init();
@@ -192,6 +216,7 @@ public class DragsimUtilsClient implements ClientModInitializer {
         StorageSearch.init();
         VoidgloomHelper.init();
         DragonTimer.init();
+        DragonHitboxes.init();
         MenuButton.init();
         Protector.init();
         BossDrops.init();
@@ -200,12 +225,14 @@ public class DragsimUtilsClient implements ClientModInitializer {
         ArmorGuard.init();
         DamageNumbers.init();
         GlobalChat.init();
+        DebugMessage.init();
         LootFilter.init();
         LootRoll.init();
         AbilitySpam.init();
         CopyChat.init();
         MiningSession.init();
         CacheTracker.init();
+        GoopTracker.init();
         PowderTracker.init();
         VoidFragments.init();
         Pets.init();
@@ -308,6 +335,14 @@ public class DragsimUtilsClient implements ClientModInitializer {
         // Bound keys are polled here too, and only with no screen open - otherwise the
         // press that binds a key would also fire whatever it was just bound to.
         if (client.screen == null && client.level != null) fireBinds(client);
+        else {
+            // Menus suppress actions, not key-state observation. A released bind
+            // must be forgotten before the menu closes, and a key assigned while
+            // editing must not fire merely because that screen then closes.
+            heldBinds.clear();
+            for (int bound : Keybinds.all().values())
+                if (Keybinds.isDown(client.getWindow(), bound)) heldBinds.add(bound);
+        }
     }
 
     /**
@@ -319,9 +354,21 @@ public class DragsimUtilsClient implements ClientModInitializer {
      */
     private void fireBinds(Minecraft client) {
         if (Keybinds.all().isEmpty()) return;
-        java.util.Set<Integer> down = new java.util.HashSet<>();
+        java.util.Set<Integer> down = downBinds;
+        down.clear();
+        boolean fresh = false;
         for (int key : Keybinds.all().values()) {
-            if (Keybinds.isDown(client.getWindow(), key)) down.add(key);
+            if (Keybinds.isDown(client.getWindow(), key)) {
+                down.add(key);
+                fresh |= !heldBinds.contains(key);
+            }
+        }
+        // Nothing newly pressed is nearly every tick, and the walk below is every setting
+        // of every module.
+        if (!fresh) {
+            heldBinds.clear();
+            heldBinds.addAll(down);
+            return;
         }
         for (Module m : registry().all()) {
             if (pressed(down, Keybinds.get(Keybinds.moduleId(m))) && m.togglable()) {

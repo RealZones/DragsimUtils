@@ -11,6 +11,17 @@ import java.util.function.Supplier;
 public final class FeatureCatalog {
     private FeatureCatalog() { }
 
+    /**
+     * The switches that head each feature on a grouped page. Drawn alike, "Slayer Profit"
+     * read as one more setting of the Slayer Tracker above it, so the page sets these apart.
+     * Weak, because a page rebuilds its rows whenever a feature's settings change.
+     */
+    private static final java.util.Set<Setting> HEADS = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+
+    static boolean head(Setting setting) {
+        return HEADS.contains(setting);
+    }
+
     public static void publicLayout(ModuleRegistry registry) {
         Catalog c = new Catalog(registry);
         c.group("page.slayerTracking", "Slayer tracking", "Kills, session pace, drops and profit.", "Slayers", "slayer.timer", "slayer.profit");
@@ -18,10 +29,11 @@ public final class FeatureCatalog {
         c.group("page.spawnMarkers", "Spawn markers", "Slayer spawn marker and Revenant tiles.", "Slayers", "slayer.spawnMarker", "slayer.revenantTiles");
         c.single("zealot.tracker", "The End");
         c.single("dragon.bossdrops", "The End");
-        c.group("page.dragonTools", "Dragon tools", "Dragon timer and placed-eye protection.", "The End", "dragon.timer", "qol.eyeguard");
+        c.group("page.dragonTools", "Dragon tools", "Dragon timer, dragon-only hitboxes and placed-eye protection.", "The End", "dragon.timer", "dragon.hitboxes", "qol.eyeguard");
         c.group("page.bossIndicators", "Boss indicators", "Golem stage and Protector/Warden beacons.", "The End", "dragon.protector", "visual.beacon");
         c.single("visual.shinyNodes", "The End", "End nodes", "Highlights confirmed shiny End nodes.");
         c.single("tracker.caches", "The End");
+        c.group("page.goop", "Goop boss", "Countdowns to the Goop's next form, and your fights and loot.", "The End", "goop.timer", "tracker.goop");
         c.single("qol.math", "The End", "Golden Dragon math", "Answers the Golden Dragon's sum.");
         c.single("dungeon.map", "Dungeons");
         c.single("dungeon.keys", "Dungeons");
@@ -31,7 +43,7 @@ public final class FeatureCatalog {
         c.single("dungeon.terminals", "Dungeons");
         c.group("page.miningTracking", "Mining tracking", "Mining session, powder gains and rates.", "Mining", "mining.session", "mining.powder");
         c.single("storage.forge", "Mining");
-        c.group("page.previews", "Inventory previews", "Storage hover previews, item search and inventory HUD.", "Inventory", "storage.preview", "hud.inventoryPreview");
+        c.group("page.previews", "Inventory previews", "Live PV editing, remembered storage pages, item search and inventory HUD.", "Inventory", "storage.preview", "hud.inventoryPreview");
         c.single("storage.recipes", "Inventory");
         c.group("page.itemAppearance", "Item appearance", "Rarity outlines and glass inventory backgrounds.", "Inventory", "visual.rarity", "visual.inventoryGlass");
         c.group("page.itemProtection", "Item protection", "Slot locking and armor-swap protection.", "Inventory", "qol.slotLock", "qol.armorguard");
@@ -39,7 +51,7 @@ public final class FeatureCatalog {
         c.group("page.chatBehavior", "Chat behavior", "Ability and Goop boss cleanup, plus global chat on join.", "Chat", "qol.abilityspam", "qol.globalchat");
         c.single("qol.copychat", "Chat");
         c.group("page.playerHud", "Player HUD", "Armor, pet, server stats and ability cooldowns.", "General", "hud.armor", "hud.activePet", "hud.stats", "visual.cooldowns");
-        c.group("page.worldAppearance", "World appearance", "Lighting and explosion clouds.", "General", "visual.fullbright", "visual.explosionParticles");
+        c.group("page.worldAppearance", "World appearance", "Lighting, explosion clouds and the camera.", "General", "visual.fullbright", "visual.explosionParticles", "visual.perspective");
         c.single("qol.damage", "General");
         c.single("visual.etherwarp", "General");
         c.group("page.notifications", "Notifications", "Gameplay and loot alerts, independently controlled.", "General", "alerts", "dragon.loot");
@@ -55,21 +67,39 @@ public final class FeatureCatalog {
             private List<List<Setting>> membership;
             private List<Setting> cached;
             private List<Setting> snapshot() {
-                if (membership == null || java.util.stream.IntStream.range(0, children.size())
-                        .anyMatch(i -> !membership.get(i).equals(children.get(i).settings()))) {
+                if (membership == null || stale()) {
                     membership = children.stream().map(m -> List.copyOf(m.settings())).toList();
                     cached = List.copyOf(build.get());
                 }
                 return cached;
+            }
+            /**
+             * By reference, and without a stream. This runs on every get() and size(), so with
+             * List.equals a page of thirty rows compared thousands of records a frame.
+             */
+            private boolean stale() {
+                for (int i = 0; i < membership.size(); i++) {
+                    List<Setting> was = membership.get(i), now = children.get(i).settings();
+                    if (was.size() != now.size()) return true;
+                    for (int j = 0; j < was.size(); j++) if (was.get(j) != now.get(j)) return true;
+                }
+                return false;
             }
             @Override public Setting get(int index) { return snapshot().get(index); }
             @Override public int size() { return snapshot().size(); }
         };
     }
 
-    private static void key(List<Setting> settings, Module module) {
-        if (module.togglable()) settings.add(new Setting.KeyAction(Keybinds.moduleId(module), module.title() + " key",
-                "Assign a shortcut for " + module.title() + ".", "Toggle", module::toggle));
+    /** Under a heading only if there is anything for it to head. */
+    private static void keys(List<Setting> settings, List<Module> modules) {
+        List<Setting> keys = new ArrayList<>();
+        for (Module module : modules)
+            if (module.togglable() && Keybinds.worthAKey(Keybinds.moduleId(module)))
+                keys.add(new Setting.KeyAction(Keybinds.moduleId(module), module.title() + " key",
+                        "Assign a shortcut for " + module.title() + ".", "Toggle", module::toggle));
+        if (keys.isEmpty()) return;
+        settings.add(new Setting.Section("Keybinds"));
+        settings.addAll(keys);
     }
 
     private static final class Catalog {
@@ -97,8 +127,7 @@ public final class FeatureCatalog {
             Module old = require(id);
             List<Setting> settings = old.group() ? old.settings() : live(List.of(old), () -> {
                 List<Setting> result = new ArrayList<>(old.settings());
-                result.add(new Setting.Section("Keybinds"));
-                key(result, old);
+                keys(result, List.of(old));
                 return result;
             });
             entries.add(new Module(id, title == null ? old.title() : title, description == null ? old.description() : description,
@@ -108,25 +137,21 @@ public final class FeatureCatalog {
 
         private void group(String id, String title, String description, String category, String... ids) {
             List<Module> children = java.util.Arrays.stream(ids).map(this::require).toList();
+            // Each feature's switch heads its own settings, open, with no sections of its own.
+            // The page used to be a Controls list of switches and then a collapsed
+            // "Slayer Tracker / Readout" section per heading, most holding one setting -
+            // three clicks to see three toggles, and a switch far from what it switches.
             List<Setting> settings = live(children, () -> {
                 List<Setting> result = new ArrayList<>();
-                result.add(new Setting.Section("Controls"));
-                for (Module child : children) if (child.togglable())
-                    result.add(new Setting.Toggle(child.title(), child.description(), child.enabled(), child.setEnabled()));
                 for (Module child : children) {
-                    boolean heading = false;
-                    for (Setting setting : child.settings()) {
-                        if (setting instanceof Setting.Section section) {
-                            result.add(new Setting.Section(child.title() + " / " + section.label()));
-                            heading = true;
-                        } else {
-                            if (!heading) { result.add(new Setting.Section(child.title())); heading = true; }
-                            result.add(setting);
-                        }
+                    if (child.togglable()) {
+                        Setting.Toggle head = new Setting.Toggle(child.title(), child.description(), child.enabled(), child.setEnabled());
+                        HEADS.add(head);
+                        result.add(head);
                     }
+                    for (Setting setting : child.settings()) if (!(setting instanceof Setting.Section)) result.add(setting);
                 }
-                result.add(new Setting.Section("Keybinds"));
-                for (Module child : children) key(result, child);
+                keys(result, children);
                 return result;
             });
             entries.add(Module.group(id, title, description, category, settings));

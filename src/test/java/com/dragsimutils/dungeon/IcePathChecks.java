@@ -12,7 +12,7 @@ public final class IcePathChecks {
     private static int checks;
 
     /**
-     * The real room, read off a /record taken standing in it: a 17x16 sheet of packed
+     * The real room: a 17x16 sheet of packed
      * ice with fifteen polished andesite blocks on top. '#' is a block, '.' is ice.
      * Rows run z+1 upward, columns x-8 to x+8.
      */
@@ -44,8 +44,8 @@ public final class IcePathChecks {
                 if (ROOM[row].charAt(col) == '#') blocked.add(cell);
             }
         }
-        check(ice.size() == 17 * 16, "the recorded sheet is 17x16");
-        check(blocked.size() == 15, "fifteen blocks stand on it, as recorded");
+        check(ice.size() == 17 * 16, "the real sheet is 17x16");
+        check(blocked.size() == 15, "fifteen blocks stand on it, as in the game");
 
         // -- sliding ------------------------------------------------------------
         Sheet plain = new Sheet(ice, blocked, new Cell(99, 99));   // goal out of the way
@@ -62,7 +62,7 @@ public final class IcePathChecks {
         // -- solving ------------------------------------------------------------
         Sheet toMiddle = new Sheet(ice, blocked, new Cell(0, 16));  // "back mid"
         List<Direction> route = IcePathLogic.solve(toMiddle, corner);
-        check(!route.isEmpty(), "the recorded room is solvable from the fish's corner");
+        check(!route.isEmpty(), "the real room is solvable from the fish's corner");
         check(IcePathLogic.next(toMiddle, corner) == route.get(0), "next() is the first hit of the route");
         // walk the route and confirm it really lands on the goal
         Cell at = corner;
@@ -82,7 +82,7 @@ public final class IcePathChecks {
         check(IcePathLogic.next(sealed, corner) == null, "and no next hit");
         check(IcePathLogic.solve(toMiddle, new Cell(0, 16)).isEmpty(), "already home needs no hits");
 
-        // Complete /record 20261014-024244: the chest is beyond the main ice sheet.
+        // The complete room: the chest is beyond the main ice sheet.
         // Stone in the approach is supported floor, not a wall or a missing tile.
         String[] complete = {
             ".............#...    ",
@@ -112,22 +112,22 @@ public final class IcePathChecks {
                 if (tile == '#') obstacles.add(cell);
             }
         }
-        Sheet recorded = new Sheet(floor, obstacles, new Cell(15, -2));
-        List<Direction> full = IcePathLogic.solve(recorded, new Cell(-5, 6));
-        check(!full.isEmpty(), "complete recorded room reaches the chest over its stone approach");
+        Sheet real = new Sheet(floor, obstacles, new Cell(15, -2));
+        List<Direction> full = IcePathLogic.solve(real, new Cell(-5, 6));
+        check(!full.isEmpty(), "complete real room reaches the chest over its stone approach");
         Cell cursor = new Cell(-5, 6);
         for (Direction direction : full) {
-            Cell landed = IcePathLogic.slide(recorded, cursor, direction);
+            Cell landed = IcePathLogic.slide(real, cursor, direction);
             check(!landed.equals(cursor), "every drawn slide advances the fish");
             cursor = landed;
         }
-        check(cursor.equals(recorded.goal()), "full recorded route ends at the actual chest");
+        check(cursor.equals(real.goal()), "full real route ends at the actual chest");
         Set<Cell> iceOnly = new HashSet<>(floor);
         iceOnly.remove(new Cell(12, -2));
         iceOnly.remove(new Cell(12, -1));
         iceOnly.remove(new Cell(13, -1));
-        check(IcePathLogic.solve(new Sheet(iceOnly, obstacles, recorded.goal()), new Cell(-5, 6)).isEmpty(),
-                "excluding the recorded stone approach reproduces the missing route");
+        check(IcePathLogic.solve(new Sheet(iceOnly, obstacles, real.goal()), new Cell(-5, 6)).isEmpty(),
+                "excluding the real stone approach reproduces the missing route");
 
         System.out.println(checks + " ice path checks passed");
     }
