@@ -306,13 +306,6 @@ tasks.register('simonSaysChecks', JavaExec) {
 }
 tasks.named('check') { dependsOn 'simonSaysChecks' }
 
-tasks.register('higherOrLowerChecks', JavaExec) {
-    dependsOn 'testClasses', 'clientClasses'
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.dragsimutils.dungeon.HigherOrLowerChecks'
-}
-tasks.named('check') { dependsOn 'higherOrLowerChecks' }
-
 tasks.register('quizChecks', JavaExec) {
 	dependsOn 'testClasses', 'clientClasses'
 	classpath = sourceSets.test.runtimeClasspath
@@ -328,6 +321,22 @@ tasks.register('icePathChecks', JavaExec) {
 }
 
 tasks.named('check') { dependsOn 'icePathChecks' }
+
+tasks.register('iceFillChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.IceFillChecks'
+}
+
+tasks.named('check') { dependsOn 'iceFillChecks' }
+
+tasks.register('creeperBeamsChecks', JavaExec) {
+	dependsOn 'testClasses', 'clientClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.dragsimutils.dungeon.CreeperBeamsChecks'
+}
+
+tasks.named('check') { dependsOn 'creeperBeamsChecks' }
 
 tasks.register('bloodRoomChecks', JavaExec) {
 	dependsOn 'testClasses', 'clientClasses'
@@ -410,6 +419,34 @@ tasks.register('browserPresentationChecks', JavaExec) {
     mainClass = 'com.dragsimutils.ui.BrowserPresentationChecks'
 }
 tasks.named('check') { dependsOn 'browserPresentationChecks' }
+
+tasks.register('roomGlowChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.dungeon.RoomGlowChecks'
+}
+tasks.named('check') { dependsOn 'roomGlowChecks' }
+
+tasks.register('arrowAlignChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.dungeon.ArrowAlignChecks'
+}
+tasks.named('check') { dependsOn 'arrowAlignChecks' }
+
+tasks.register('doorHighlightChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.dungeon.DoorHighlightChecks'
+}
+tasks.named('check') { dependsOn 'doorHighlightChecks' }
+
+tasks.register('eyeGuardChecks', JavaExec) {
+    dependsOn 'testClasses', 'clientClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.dragsimutils.qol.EyeGuardChecks'
+}
+tasks.named('check') { dependsOn 'eyeGuardChecks' }
 
 tasks.register('profileDataChecks', JavaExec) {
     dependsOn 'testClasses', 'clientClasses'

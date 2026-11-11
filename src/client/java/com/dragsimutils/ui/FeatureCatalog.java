@@ -37,8 +37,11 @@ public final class FeatureCatalog {
         c.single("qol.math", "The End", "Golden Dragon math", "Answers the Golden Dragon's sum.");
         c.single("dungeon.map", "Dungeons");
         c.single("dungeon.keys", "Dungeons");
-        c.group("page.roomPuzzles", "Room puzzles", "Five independently controlled room solvers.", "Dungeons",
-                "dungeon.threeWeirdos", "dungeon.ticTacToe", "dungeon.quiz", "dungeon.higherOrLower", "dungeon.icePath");
+        c.single("dungeon.doors", "Dungeons");
+        c.single("dungeon.roomGlow", "Dungeons");
+        c.group("page.roomPuzzles", "Room puzzles", "Six independently controlled room solvers.", "Dungeons",
+                "dungeon.threeWeirdos", "dungeon.ticTacToe", "dungeon.quiz", "dungeon.icePath", "dungeon.iceFill",
+                "dungeon.creeperBeams");
         c.single("dungeon.bloodRoom", "Dungeons");
         c.single("dungeon.terminals", "Dungeons");
         c.group("page.miningTracking", "Mining tracking", "Mining session, powder gains and rates.", "Mining", "mining.session", "mining.powder");
@@ -51,9 +54,11 @@ public final class FeatureCatalog {
         c.group("page.chatBehavior", "Chat behavior", "Ability and Goop boss cleanup, plus global chat on join.", "Chat", "qol.abilityspam", "qol.globalchat");
         c.single("qol.copychat", "Chat");
         c.group("page.playerHud", "Player HUD", "Armor, pet, server stats and ability cooldowns.", "General", "hud.armor", "hud.activePet", "hud.stats", "visual.cooldowns");
-        c.group("page.worldAppearance", "World appearance", "Lighting, explosion clouds and the camera.", "General", "visual.fullbright", "visual.explosionParticles", "visual.perspective");
+        c.group("page.worldAppearance", "World appearance", "Lighting and explosion clouds.", "General", "visual.fullbright", "visual.explosionParticles");
+        c.group("page.camera", "Camera", "Your third-person view, how it looks, and free look.", "General", "visual.camera", "visual.perspective");
         c.single("qol.damage", "General");
         c.single("visual.etherwarp", "General");
+        c.single("visual.animations", "General");
         c.group("page.notifications", "Notifications", "Gameplay and loot alerts, independently controlled.", "General", "alerts", "dragon.loot");
         c.group("page.commands", "Commands & menu", "Command keybinds and menu shortcuts.", "General", "qol.commands", "qol.hotdButton");
         c.single("social.discord", "General");

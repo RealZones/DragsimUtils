@@ -34,7 +34,7 @@ public final class Config {
      * default changed later never reaches anyone who already has the old one saved - the
      * file holds it whether they chose it or not, and nothing tells the two apart.
      */
-    private static final int VERSION = 2;
+    private static final int VERSION = 3;
 
     /**
      * Changes made once to a config written by an older build.
@@ -52,6 +52,15 @@ public final class Config {
         }
         if (version < 2 && "Corners".equals(p.getProperty("module.visual.rarity.set.Style")))
             p.setProperty("module.visual.rarity.set.Style", "Underline");
+        // The camera's key was Free Look's (once Perspective Mode's) until the Camera switch
+        // became the thing a key toggles. A key set there meant "the camera", so it moves.
+        if (version < 3 && p.getProperty("bind.module.visual.camera") == null) {
+            String key = p.getProperty("bind.module.visual.perspective");
+            if (key != null && !String.valueOf(Keybinds.NONE).equals(key)) {
+                p.setProperty("bind.module.visual.camera", key);
+                p.remove("bind.module.visual.perspective");
+            }
+        }
     }
 
     // ── load ──────────────────────────────────────────────────────────────────
@@ -131,6 +140,10 @@ public final class Config {
                         && s.label().equals("Nearest tracer")) {
                     // The old boss-only toggle now also controls the constant tile tracer.
                     raw = p.getProperty(base + ".set.Spawn tracer");
+                }
+                if (raw == null && m.id().equals("slayer.timer") && s.label().equals("Start Slayer Quest")) {
+                    raw = p.getProperty("module.alerts.set.Start Slayer Quest",
+                            p.getProperty("module.alerts.set.No slayer quest"));
                 }
                 if (raw == null) continue;
                 apply(s, raw);

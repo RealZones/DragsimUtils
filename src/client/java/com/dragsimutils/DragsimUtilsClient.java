@@ -6,9 +6,11 @@ import com.dragsimutils.dragons.DragonTimer;
 import com.dragsimutils.dragons.Protector;
 import com.dragsimutils.dungeon.DungeonContext;
 import com.dragsimutils.dungeon.DungeonMap;
+import com.dragsimutils.dungeon.DoorHighlight;
 import com.dragsimutils.dungeon.KeyAlert;
 import com.dragsimutils.dungeon.BloodRoom;
-import com.dragsimutils.dungeon.HigherOrLower;
+import com.dragsimutils.dungeon.CreeperBeams;
+import com.dragsimutils.dungeon.IceFill;
 import com.dragsimutils.dungeon.IcePath;
 import com.dragsimutils.dungeon.Quiz;
 import com.dragsimutils.dungeon.ThreeWeirdos;
@@ -151,10 +153,13 @@ public class DragsimUtilsClient implements ClientModInitializer {
             registry.replace(ThreeWeirdos.module());
             registry.replace(TicTacToe.module());
             registry.replace(Quiz.module());
-            registry.replace(HigherOrLower.module());
             registry.replace(BloodRoom.module());
             registry.add(KeyAlert.module());
+            registry.add(DoorHighlight.module());
+            registry.add(com.dragsimutils.dungeon.RoomGlow.module());
             registry.replace(IcePath.module());
+            registry.replace(IceFill.module());
+            registry.replace(CreeperBeams.module());
             registry.replace(TerminalSolver.module());
             registry.replace(Alerts.module());
             registry.replace(EyeGuard.module());
@@ -192,8 +197,10 @@ public class DragsimUtilsClient implements ClientModInitializer {
             registry.insertBefore("qol.lootfilter", LootChat.module());
             registry.hide("qol.lootfilter").hide("qol.lootroll");
             registry.add(com.dragsimutils.visual.Perspective.module());
+            registry.add(com.dragsimutils.visual.CameraTweaks.module());
+            registry.add(com.dragsimutils.visual.Animations.module());
             registry.insertBefore("visual.fullbright", VisualTweaks.module());
-            registry.hide("visual.fullbright").hide("visual.inventoryGlass").hide("visual.perspective")
+            registry.hide("visual.fullbright").hide("visual.inventoryGlass").hide("visual.perspective").hide("visual.camera")
                     .hide("visual.explosionParticles").hide("visual.shinyNodes");
             com.dragsimutils.ui.FeatureCatalog.publicLayout(registry);
             Config.load(registry);
@@ -209,6 +216,7 @@ public class DragsimUtilsClient implements ClientModInitializer {
         Drops.init();
         DungeonContext.init();
         KeyAlert.init();
+        DoorHighlight.init();
         HudLayout.init();
         com.dragsimutils.hud.ChatHudDrag.init();
         StoragePreview.init();
@@ -244,6 +252,7 @@ public class DragsimUtilsClient implements ClientModInitializer {
         InventoryPreview.init();
         EquipmentHud.init();
         NameGradient.init();
+        com.dragsimutils.visual.GuildNames.init();
         Area.init();
         ShinyNodes.init();
         LootAlerts.init();
@@ -253,6 +262,7 @@ public class DragsimUtilsClient implements ClientModInitializer {
         Beacon.init();
         RarityOutline.init();
         Etherwarp.init();
+        com.dragsimutils.dungeon.RoomGlow.init();
         Cooldowns.init();
         Slayer.init();
         SlayerSpawnMarker.init();
@@ -262,9 +272,10 @@ public class DragsimUtilsClient implements ClientModInitializer {
         ThreeWeirdos.init();
         TicTacToe.init();
         Quiz.init();
-        HigherOrLower.init();
         BloodRoom.init();
         IcePath.init();
+        IceFill.init();
+        CreeperBeams.init();
         TerminalSolver.init();
         StorageOverview.init();
 

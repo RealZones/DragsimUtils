@@ -65,7 +65,38 @@ public final class InventoryVisualChecks {
             int c = old.get(i).style.getColor().getValue();
             check(((c >> 16) & 255) >= 0x10 && ((c >> 16) & 255) <= 0x20 && (c & 255) >= 0x80, "Old line follows the live gradient");
         }
+        guildList();
         System.out.println(checks + " inventory and animated-name checks passed");
+    }
+
+    /** A /g online member line in the server's format: gradients quantised to the classic codes. */
+    private static void guildList() {
+        String raw = "§3[§bD§bR§bA§bG§9O§dN§d]§c §3Q§bu§bi§be§bt§bL§ba§9n§9t§de§dr§dn§cs §7● §b[MVP§c+§b] Player_Two §7● "
+                + "§0[§4D§4R§4A§4G§4O§4N§4]§6 §0E§4m§4b§4e§4r§4e§6d §7● §7PlainName42";
+        Component fixed = GuildNames.rebuild(raw, new java.util.HashMap<>());
+        check(fixed != null && fixed.getString().equals(raw.replaceAll("§.", "")), "Guild line text unchanged");
+        List<Glyph> g = glyphs(fixed.getVisualOrderText());
+        String text = fixed.getString();
+        int mvp = text.indexOf("[MVP"), plus = text.indexOf('+'), jon = text.indexOf("PlainName42"), def = text.indexOf("Embered");
+        check(g.get(mvp + 1).style.getColor().getValue() == 0x55FFFF && g.get(plus).style.getColor().getValue() == 0xFF5555,
+                "[MVP+] keeps its own colours");
+        check(g.get(jon).style.getColor().getValue() == 0xAAAAAA, "A plain name stays as sent");
+        int first = g.get(def).style.getColor().getValue();
+        check(first != 0 && ((first >> 16 & 255) + (first >> 8 & 255) + (first & 255)) > 150, "A black start is lifted to readable");
+        int apple = text.indexOf("QuietLanterns");
+        for (int i = apple + 1; i < apple + 13; i++) {
+            int x = g.get(i - 1).style.getColor().getValue(), y = g.get(i).style.getColor().getValue();
+            int jump = Math.abs((x >> 16 & 255) - (y >> 16 & 255)) + Math.abs((x >> 8 & 255) - (y >> 8 & 255)) + Math.abs((x & 255) - (y & 255));
+            check(jump < 90, "Fade has no hard steps between letters " + (i - apple));
+        }
+        check(!g.get(text.indexOf("[DRAGON] Q")).style.equals(g.get(text.indexOf("[DRAGON] Q") + 3).style), "Tag fades too");
+        // True colours, when known, win over the quantised ones.
+        var known = new java.util.HashMap<String, int[]>();
+        known.put("quietlanterns", new int[]{0x40E0FF, 0xFF60C0});
+        List<Glyph> k = glyphs(GuildNames.rebuild(raw, known).getVisualOrderText());
+        check(k.get(apple).style.getColor().getValue() == 0x40E0FF && k.get(apple + 12).style.getColor().getValue() == 0xFF60C0,
+                "Known gradient used end to end");
+        check(GuildNames.rebuild("§eMember §7[23]", known) == null, "Role headers left alone");
     }
 
     /** A gradient far from the test's other one: 0x1000FF to 0x2000C0, so either is easy to tell apart. */

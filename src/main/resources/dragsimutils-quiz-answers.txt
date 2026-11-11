@@ -1,19 +1,51 @@
-# Confirmed quiz answers collected in DragSim dungeons through 2026-10-15.
-# Values are option text, not A/B/C slots; the room can move them.
+# Quiz answers for Oruo the Omniscient's room. Values are option text, never the
+# circled letter, which moves between rounds.
+# Marked lines were accepted by Dragsim in play; the rest are SkyBlock lore.
+# "What SkyBlock year is it?" is worked out from the clock, not stored.
+what is the status of the watcher = Stalker
+what is the status of bonzo = New Necromancer
+what is the status of scarf = Apprentice Necromancer
+# accepted by Dragsim
+what is the status of the professor = Professor
+what is the status of thorn = Shaman Necromancer
+what is the status of livid = Master Necromancer
+# accepted by Dragsim
+what is the status of sadan = Necromancer Lord
+what is the status of maxor, storm, goldor, and necron = The Wither Lords
+# accepted by Dragsim; its own count, not Hypixel's
+how many total fairy souls are there = 289 Fairy Souls
+which brother is on the spider's den = Rick
+which brother is on the spiders den = Rick
+what is the name of rick's brother = Pat
+what is the name of the vendor in the hub who sells stained glass = Wool Weaver
+# accepted by Dragsim
+what is the name of the person that upgrades pets = Kat
+what is the name of the lady of the nether = Elle
+which villager in the village gives you a rogue sword = Jamie
+# accepted by Dragsim, against Voracious Spider and Splitter Spider. Other outsiders
+# are learned as they come up; the room shows one among two that do spawn there.
+# Night Spider accepted against a different pair. The answer depends on the
+# options shown, so both are kept; the first one on offer is the hint.
+which of these enemies does not spawn in the spider's den = Wither Skeleton|Night Spider
+which of these enemies does not spawn in the spiders den = Wither Skeleton|Night Spider
+which of these monsters only spawns at night = Zombie Villager
+
+# Accepted by Dragsim in play. Option letters taken off: they move between rounds.
 what cracks open a crypt = Superboom TNT
 which room hides the wither lords' portal = The Blood Room
 who guards the blood room = The Watcher
 how much score does a death cost = 2
-which wither lord can be hit at any time = Necron
 what does the mimic pretend to be = A chest
 who revives a fallen teammate = The Fairy
-which wither lord hides behind terminals = Goldor
-what opens the blood door = The Blood Key
 what does a star mob carry = Wither Keys
 which wither lord is crushed under pillars = Storm
+which wither lord is fought first = Maxor
 how many rooms wide is floor vii = 6
 what score earns an s+ rank = 300
-which wither lord is fought first = Maxor
-who sends you into the catacombs = Mort
 how many crypt kills count towards bonus score = 5
-how much score does a failed puzzle cost = 14
+how many fairy souls are there in gold mine = 12 Fairy Souls
+how many fairy souls are there in jerry's workshop = 5 Fairy Souls
+how many fairy souls are there in dungeon hub = 7 Fairy Souls
+which of these is not a dragon in the end = Weak Dragon
+# Dragsim cuts this one short, "...who sells stained", on its own line.
+what is the name of the vendor in the hub who sells stained = Wool Weaver
