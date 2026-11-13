@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12.2
+
+Removed questionable features.
+
 ## 1.12.1
 
 Removed a questionable feature.
