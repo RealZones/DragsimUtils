@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12.1
+
+Removed a questionable feature.
+
 ## 1.0.0
 
 Initial Dragsim Utils release for Minecraft 26.1.2 on Fabric.

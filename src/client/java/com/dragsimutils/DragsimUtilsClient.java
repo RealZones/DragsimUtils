@@ -6,7 +6,6 @@ import com.dragsimutils.dragons.DragonTimer;
 import com.dragsimutils.dragons.Protector;
 import com.dragsimutils.dungeon.DungeonContext;
 import com.dragsimutils.dungeon.DungeonMap;
-import com.dragsimutils.dungeon.DoorHighlight;
 import com.dragsimutils.dungeon.KeyAlert;
 import com.dragsimutils.dungeon.BloodRoom;
 import com.dragsimutils.dungeon.CreeperBeams;
@@ -155,7 +154,6 @@ public class DragsimUtilsClient implements ClientModInitializer {
             registry.replace(Quiz.module());
             registry.replace(BloodRoom.module());
             registry.add(KeyAlert.module());
-            registry.add(DoorHighlight.module());
             registry.add(com.dragsimutils.dungeon.RoomGlow.module());
             registry.replace(IcePath.module());
             registry.replace(IceFill.module());
@@ -216,7 +214,6 @@ public class DragsimUtilsClient implements ClientModInitializer {
         Drops.init();
         DungeonContext.init();
         KeyAlert.init();
-        DoorHighlight.init();
         HudLayout.init();
         com.dragsimutils.hud.ChatHudDrag.init();
         StoragePreview.init();

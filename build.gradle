@@ -434,13 +434,6 @@ tasks.register('arrowAlignChecks', JavaExec) {
 }
 tasks.named('check') { dependsOn 'arrowAlignChecks' }
 
-tasks.register('doorHighlightChecks', JavaExec) {
-    dependsOn 'testClasses', 'clientClasses'
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.dragsimutils.dungeon.DoorHighlightChecks'
-}
-tasks.named('check') { dependsOn 'doorHighlightChecks' }
-
 tasks.register('eyeGuardChecks', JavaExec) {
     dependsOn 'testClasses', 'clientClasses'
     classpath = sourceSets.test.runtimeClasspath
